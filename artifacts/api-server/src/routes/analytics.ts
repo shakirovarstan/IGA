@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 import { db, analyticsEventsTable, analyticsOnlineTable, insertAnalyticsEventSchema } from "@workspace/db";
 import { sql, count, countDistinct, gte, and, eq } from "drizzle-orm";
 
@@ -7,22 +7,28 @@ const router: IRouter = Router();
 const ADMIN_SECRET = process.env.ADMIN_SECRET ?? "iga2025";
 const ONLINE_TIMEOUT_MINUTES = 5;
 
-router.post("/analytics/heartbeat", async (req, res) => {
-  const { visitor_id, session_id } = req.body;
-  if (!visitor_id || !session_id) { res.status(400).json({ error: "Missing ids" }); return; }
+router.post("/analytics/heartbeat", async (req: Request, res: Response): Promise<void> => {
+  const { visitor_id, session_id } = req.body as { visitor_id?: string; session_id?: string };
+  if (!visitor_id || !session_id) {
+    res.status(400).json({ error: "Missing ids" });
+    return;
+  }
   try {
     await db
       .insert(analyticsOnlineTable)
-      .values({ visitor_id, session_id, last_seen: new Date(), page: 'active' })
+      .values({ visitor_id, session_id, last_seen: new Date(), page: "active" })
       .onConflictDoUpdate({
         target: analyticsOnlineTable.visitor_id,
         set: { last_seen: new Date(), session_id },
       });
     res.json({ ok: true });
-  } catch { res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
-router.post("/analytics/event", async (req, res) => {
+router.post("/analytics/event", async (req: Request, res: Response): Promise<void> => {
   try {
     const parsed = insertAnalyticsEventSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -57,8 +63,8 @@ router.post("/analytics/event", async (req, res) => {
   }
 });
 
-router.get("/analytics/stats", async (req, res) => {
-  const secret = req.headers["x-admin-secret"] ?? req.query["secret"];
+router.get("/analytics/stats", async (req: Request, res: Response): Promise<void> => {
+  const secret = (req.headers["x-admin-secret"] as string | undefined) ?? (req.query["secret"] as string | undefined);
   if (secret !== ADMIN_SECRET) {
     res.status(401).json({ error: "Unauthorized" });
     return;
@@ -111,15 +117,19 @@ router.get("/analytics/stats", async (req, res) => {
         correct: sql<number>`sum(case when ${analyticsEventsTable.is_correct} = true then 1 else 0 end)`,
       })
       .from(analyticsEventsTable)
-      .where(and(eq(analyticsEventsTable.event_type, "question_answered"), sql`${analyticsEventsTable.subject} is not null`))
+      .where(
+        and(
+          eq(analyticsEventsTable.event_type, "question_answered"),
+          sql`${analyticsEventsTable.subject} is not null`
+        )
+      )
       .groupBy(analyticsEventsTable.subject);
 
     const daily: Record<string, number> = {};
     for (let i = 6; i >= 0; i--) {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
-      daily[key] = 0;
+      daily[d.toISOString().slice(0, 10)] = 0;
     }
 
     const dailyRaw = await db
