@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ALGEBRA_QUESTIONS, GEOMETRY_QUESTIONS, RUSSIAN_QUESTIONS, HISTORY_QUESTIONS } from './data/questions';
+import { ALGEBRA_QUESTIONS, GEOMETRY_QUESTIONS, RUSSIAN_QUESTIONS } from './data/questions';
 import { TOPICS } from './data/topics';
-import { Question, Subject, Topic, TopicExplanation } from './types';
+import { Question, Subject } from './types';
 import { useProgress } from './hooks/useProgress';
 import { MathText } from './components/MathText';
 import { Graph } from './components/Graph';
@@ -10,7 +10,6 @@ import { cn } from './lib/utils';
 import { 
   BookOpen, 
   Trophy, 
-  Clock, 
   ChevronRight, 
   ArrowLeft, 
   CheckCircle2, 
@@ -25,41 +24,81 @@ import {
   Moon,
   Rocket,
   Circle,
-  CheckCircle
+  CheckCircle,
+  ShieldCheck,
+  ChevronLeft,
+  TrendingUp,
+  Users,
+  Target
 } from 'lucide-react';
 
-type AppState = 'landing' | 'exam' | 'results' | 'drill_selector' | 'mistake_review' | 'topic_list' | 'learn_topic';
+type AppState = 'landing' | 'exam' | 'results' | 'drill_selector' | 'mistake_review' | 'topic_list' | 'learn_topic' | 'admin';
 type Language = 'ru' | 'ky';
 
 const SUBJECTS: { id: Subject; title: { ru: string; ky: string }; icon: any; color: string; gradient: string; emoji: string }[] = [
-  { id: 'algebra', title: { ru: 'Алгебра', ky: 'Алгебра' }, icon: Layout, color: 'bg-blue-600', gradient: 'linear-gradient(135deg, #4361ee, #4cc9f0)', emoji: '📐' },
-  { id: 'geometry', title: { ru: 'Геометрия', ky: 'Геометрия' }, icon: BookOpen, color: 'bg-violet-600', gradient: 'linear-gradient(135deg, #7209b7, #f72585)', emoji: '📏' },
-  { id: 'russian', title: { ru: 'Русский язык', ky: 'Орус тили' }, icon: GraduationCap, color: 'bg-teal-600', gradient: 'linear-gradient(135deg, #06b6d4, #059669)', emoji: '📖' },
-  { id: 'history', title: { ru: 'История Кыргызстана', ky: 'Кыргызстан тарыхы' }, icon: Trophy, color: 'bg-amber-600', gradient: 'linear-gradient(135deg, #f77f00, #e63946)', emoji: '🏔️' },
+  { id: 'algebra',  title: { ru: 'Алгебра',      ky: 'Алгебра'     }, icon: Layout,       color: 'bg-blue-600',   gradient: 'linear-gradient(135deg, #4361ee, #4cc9f0)', emoji: '📐' },
+  { id: 'geometry', title: { ru: 'Геометрия',    ky: 'Геометрия'   }, icon: BookOpen,     color: 'bg-violet-600', gradient: 'linear-gradient(135deg, #7209b7, #f72585)', emoji: '📏' },
+  { id: 'russian',  title: { ru: 'Русский язык', ky: 'Орус тили'   }, icon: GraduationCap,color: 'bg-teal-600',   gradient: 'linear-gradient(135deg, #06b6d4, #059669)', emoji: '📖' },
 ];
 
+interface SavedExamState {
+  questions: Question[];
+  index: number;
+  answers: Record<string, string>;
+  timeLeft: number;
+  isTimerActive: boolean;
+}
+
+function getAnalytics() {
+  try {
+    return JSON.parse(localStorage.getItem('iga_analytics') || '{"sessions":[],"sessionCount":0}');
+  } catch { return { sessions: [], sessionCount: 0 }; }
+}
+
+function saveAnalytics(data: any) {
+  try { localStorage.setItem('iga_analytics', JSON.stringify(data)); } catch {}
+}
+
 export default function App() {
-  const [darkMode, setDarkMode] = useState(false);
-  const [state, setState] = useState<AppState>('landing');
-  const [lang, setLang] = useState<Language>('ru');
+  const [darkMode, setDarkMode]       = useState(false);
+  const [state, setState]             = useState<AppState>('landing');
+  const [lang, setLang]               = useState<Language>('ru');
   const [currentSubject, setCurrentSubject] = useState<Subject>('algebra');
   const [currentQuestions, setCurrentQuestions] = useState<Question[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [showSolution, setShowSolution] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(2400); // 40 minutes
+  const [currentIndex, setCurrentIndex]   = useState(0);
+  const [answers, setAnswers]             = useState<Record<string, string>>({});
+  const [showSolution, setShowSolution]   = useState(false);
+  const [timeLeft, setTimeLeft]           = useState(2400);
   const [isTimerActive, setIsTimerActive] = useState(false);
   const [currentTopicId, setCurrentTopicId] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm]       = useState('');
+  const [hintIndex, setHintIndex]         = useState(0);
+  const [shortAnswer, setShortAnswer]     = useState('');
+  const [savedExamState, setSavedExamState] = useState<SavedExamState | null>(null);
+  const [topicCameFrom, setTopicCameFrom] = useState<AppState>('topic_list');
+
+  // Admin panel
+  const [adminUnlocked, setAdminUnlocked] = useState(() => localStorage.getItem('iga_admin') === '1');
+  const logoClickCount   = useRef(0);
+  const logoClickTimer   = useRef<any>(null);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [showAdminPrompt, setShowAdminPrompt] = useState(false);
 
   const { progress, updateProgress, markTopicAsStudied } = useProgress();
 
-  // Apply dark mode class to html element
+  // Track session analytics
+  useEffect(() => {
+    const data = getAnalytics();
+    data.sessionCount = (data.sessionCount || 0) + 1;
+    const today = new Date().toISOString().slice(0, 10);
+    data.sessions = [...(data.sessions || []).slice(-99), { date: today, questions: 0 }];
+    saveAnalytics(data);
+  }, []);
+
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
   }, [darkMode]);
 
-  // Timer logic
   useEffect(() => {
     let timer: any;
     if (isTimerActive && timeLeft > 0) {
@@ -77,26 +116,45 @@ export default function App() {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  const startExam = (mode: AppState, topic?: Topic) => {
-    let allQuestions: Question[] = [];
-    if (currentSubject === 'algebra') allQuestions = ALGEBRA_QUESTIONS;
-    if (currentSubject === 'geometry') allQuestions = GEOMETRY_QUESTIONS;
-    if (currentSubject === 'russian') allQuestions = RUSSIAN_QUESTIONS;
-    if (currentSubject === 'history') allQuestions = HISTORY_QUESTIONS;
-    
+  const handleLogoClick = () => {
+    logoClickCount.current += 1;
+    if (logoClickTimer.current) clearTimeout(logoClickTimer.current);
+    logoClickTimer.current = setTimeout(() => { logoClickCount.current = 0; }, 2500);
+    if (logoClickCount.current >= 7) {
+      logoClickCount.current = 0;
+      setShowAdminPrompt(true);
+    }
+  };
+
+  const handleAdminLogin = () => {
+    if (adminPassword === 'iga2025') {
+      setAdminUnlocked(true);
+      localStorage.setItem('iga_admin', '1');
+      setShowAdminPrompt(false);
+      setState('admin');
+    } else {
+      setAdminPassword('');
+    }
+  };
+
+  const getQuestionsForSubject = (subject: Subject): Question[] => {
+    if (subject === 'algebra')  return ALGEBRA_QUESTIONS;
+    if (subject === 'geometry') return GEOMETRY_QUESTIONS;
+    if (subject === 'russian')  return RUSSIAN_QUESTIONS;
+    return [];
+  };
+
+  const startExam = (mode: AppState, topic?: string) => {
+    const allQuestions = getQuestionsForSubject(currentSubject);
     let filtered = [...allQuestions];
-    
+
     if (mode === 'drill_selector' && topic) {
       filtered = filtered.filter(q => q.topic === topic);
-      if (topic === currentTopicId) {
-        filtered = filtered.sort(() => 0.5 - Math.random()).slice(0, 5);
-      }
+      filtered = filtered.sort(() => 0.5 - Math.random()).slice(0, 8);
     } else if (mode === 'mistake_review') {
       filtered = filtered.filter(q => progress.mistakes.includes(q.id));
     } else {
-      // Full practice: 20 P1, 2 P2, 3 P3 (for Math)
-      // For History/Russian: maybe different structure
-      if (currentSubject === 'history' || currentSubject === 'russian') {
+      if (currentSubject === 'russian') {
         filtered = allQuestions.filter(q => q.part === 1).sort(() => 0.5 - Math.random()).slice(0, 30);
       } else {
         const p1 = allQuestions.filter(q => q.part === 1).sort(() => 0.5 - Math.random()).slice(0, 20);
@@ -117,9 +175,10 @@ export default function App() {
     setShowSolution(false);
     setState('exam');
     setHintIndex(0);
-    
+    setSavedExamState(null);
+
     if (mode === 'exam') {
-      const time = (currentSubject === 'history' || currentSubject === 'russian') ? 3600 : 2400;
+      const time = currentSubject === 'russian' ? 3600 : 2400;
       setTimeLeft(time);
       setIsTimerActive(true);
     } else {
@@ -127,23 +186,23 @@ export default function App() {
     }
   };
 
-  const [hintIndex, setHintIndex] = useState(0);
-  const [shortAnswer, setShortAnswer] = useState('');
-
   const handleAnswer = (optionId: string) => {
     if (showSolution) return;
-    
     const question = currentQuestions[currentIndex];
     const isCorrect = optionId === question.correctAnswer;
-    
     setAnswers(prev => ({ ...prev, [question.id]: optionId }));
     setShowSolution(true);
     updateProgress(question.topic, isCorrect, question.id);
     if (isCorrect && currentTopicId === question.topic) {
       const stats = progress.topicStats[question.topic] || { correct: 0, total: 0 };
-      if (stats.correct + 1 >= 3) {
-        markTopicAsStudied(question.topic);
-      }
+      if (stats.correct + 1 >= 3) markTopicAsStudied(question.topic);
+    }
+    // Track analytics
+    const data = getAnalytics();
+    if (data.sessions.length > 0) {
+      data.sessions[data.sessions.length - 1].questions = 
+        (data.sessions[data.sessions.length - 1].questions || 0) + 1;
+      saveAnalytics(data);
     }
   };
 
@@ -154,12 +213,6 @@ export default function App() {
     setAnswers(prev => ({ ...prev, [question.id]: shortAnswer }));
     setShowSolution(true);
     updateProgress(question.topic, isCorrect, question.id);
-    if (isCorrect && currentTopicId === question.topic) {
-      const stats = progress.topicStats[question.topic] || { correct: 0, total: 0 };
-      if (stats.correct + 1 >= 3) {
-        markTopicAsStudied(question.topic);
-      }
-    }
   };
 
   const handleSelfGrade = (grade: 'full' | 'partial' | 'none') => {
@@ -168,12 +221,6 @@ export default function App() {
     setAnswers(prev => ({ ...prev, [question.id]: grade }));
     setShowSolution(true);
     updateProgress(question.topic, isCorrect, question.id);
-    if (isCorrect && currentTopicId === question.topic) {
-      const stats = progress.topicStats[question.topic] || { correct: 0, total: 0 };
-      if (stats.correct + 1 >= 3) {
-        markTopicAsStudied(question.topic);
-      }
-    }
     nextQuestion();
   };
 
@@ -189,12 +236,53 @@ export default function App() {
     }
   };
 
+  const prevQuestion = () => {
+    if (currentIndex > 0) {
+      const prevIdx = currentIndex - 1;
+      setCurrentIndex(prevIdx);
+      const prevQ = currentQuestions[prevIdx];
+      const wasAnswered = prevQ && answers[prevQ.id] !== undefined;
+      setShowSolution(wasAnswered);
+      setShortAnswer(wasAnswered && prevQ ? (answers[prevQ.id] || '') : '');
+      setHintIndex(0);
+    }
+  };
+
   const skipQuestion = () => {
     if (currentIndex < currentQuestions.length - 1) {
       setCurrentIndex(prev => prev + 1);
       setShowSolution(false);
       setShortAnswer('');
       setHintIndex(0);
+    }
+  };
+
+  const goToLearnTopic = (topicId: string) => {
+    setSavedExamState({
+      questions: currentQuestions,
+      index: currentIndex,
+      answers: { ...answers },
+      timeLeft,
+      isTimerActive,
+    });
+    setIsTimerActive(false);
+    setTopicCameFrom(state);
+    setCurrentTopicId(topicId);
+    setState('learn_topic');
+  };
+
+  const returnFromLearnTopic = () => {
+    if (savedExamState) {
+      setCurrentQuestions(savedExamState.questions);
+      setCurrentIndex(savedExamState.index);
+      setAnswers(savedExamState.answers);
+      setTimeLeft(savedExamState.timeLeft);
+      setIsTimerActive(savedExamState.isTimerActive);
+      setShowSolution(savedExamState.answers[savedExamState.questions[savedExamState.index]?.id] !== undefined);
+      setSavedExamState(null);
+      setState(topicCameFrom === 'exam' ? 'exam' : 'drill_selector');
+    } else {
+      setState('topic_list');
     }
   };
 
@@ -206,20 +294,41 @@ export default function App() {
 
     return (
       <div className="min-h-screen bg-[var(--bg-app)] flex flex-col">
-        {/* Hero header */}
+        {showAdminPrompt && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-6" onClick={() => setShowAdminPrompt(false)}>
+            <div className="bg-[var(--card-bg)] rounded-[2rem] p-8 w-full max-w-xs space-y-4" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center gap-3">
+                <ShieldCheck className="w-6 h-6 text-blue-500" />
+                <h3 className="font-black text-[var(--text-main)] text-lg">{lang === 'ru' ? 'Панель администратора' : 'Администратор панели'}</h3>
+              </div>
+              <input
+                autoFocus
+                type="password"
+                value={adminPassword}
+                onChange={e => setAdminPassword(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAdminLogin()}
+                placeholder={lang === 'ru' ? 'Пароль...' : 'Сырсөз...'}
+                className="w-full p-4 rounded-[1.5rem] border-2 border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--input-text)] outline-none focus:border-blue-500 font-bold"
+              />
+              <button onClick={handleAdminLogin} className="w-full neon-gradient text-white py-4 rounded-[1.5rem] font-black">
+                {lang === 'ru' ? 'Войти' : 'Кирүү'}
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="hero-gradient px-5 pt-12 pb-8 relative overflow-hidden">
-          {/* decorative blobs */}
           <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10 blur-2xl" />
           <div className="absolute bottom-0 left-5 w-24 h-24 rounded-full bg-white/10 blur-xl" />
 
           <div className="flex items-start justify-between mb-6 relative z-10">
             <div>
-              <div className="flex items-center gap-2 mb-1">
+              <button onClick={handleLogoClick} className="flex items-center gap-2 mb-1 active:opacity-80">
                 <div className="bg-white/20 p-1.5 rounded-lg">
                   <GraduationCap className="w-5 h-5 text-white" />
                 </div>
                 <span className="text-white/80 text-xs font-black uppercase tracking-widest">IGA-Ready</span>
-              </div>
+              </button>
               <h1 className="text-white font-black text-2xl leading-tight">
                 {lang === 'ru' ? 'Подготовка к ИГА' : 'ЖМАТка даярдык'}
               </h1>
@@ -227,7 +336,7 @@ export default function App() {
                 {lang === 'ru' ? 'Кыргызстан, 9 класс' : 'Кыргызстан, 9-класс'}
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-start">
               <div className="flex bg-white/15 p-0.5 rounded-xl overflow-hidden">
                 <button onClick={() => setLang('ru')} className={cn("px-3 py-1.5 text-xs font-black rounded-lg transition-all", lang === 'ru' ? "bg-white text-blue-700" : "text-white/80")}>RU</button>
                 <button onClick={() => setLang('ky')} className={cn("px-3 py-1.5 text-xs font-black rounded-lg transition-all", lang === 'ky' ? "bg-white text-blue-700" : "text-white/80")}>KY</button>
@@ -235,10 +344,14 @@ export default function App() {
               <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-xl bg-white/15 text-white">
                 {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </button>
+              {adminUnlocked && (
+                <button onClick={() => setState('admin')} className="p-2 rounded-xl bg-white/15 text-white">
+                  <ShieldCheck className="w-5 h-5" />
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Stats row */}
           <div className="flex gap-3 relative z-10">
             <div className="flex-1 bg-white/15 backdrop-blur-sm rounded-2xl p-3 flex items-center gap-3">
               <div className="bg-orange-400/30 p-2 rounded-xl">
@@ -262,12 +375,11 @@ export default function App() {
         </div>
 
         <div className="flex-1 px-5 py-6 space-y-6">
-          {/* Subject selector */}
           <div className="space-y-3">
             <h2 className="text-[11px] font-black text-[var(--text-muted)] uppercase tracking-[0.18em]">
               {lang === 'ru' ? 'Предмет' : 'Предмет'}
             </h2>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {SUBJECTS.map((s) => {
                 const sStudied = progress.studiedTopics.filter(id => TOPICS.find(t => t.id === id)?.subject === s.id).length;
                 const sTotal = TOPICS.filter(t => t.subject === s.id).length;
@@ -277,22 +389,19 @@ export default function App() {
                     key={s.id}
                     onClick={() => setCurrentSubject(s.id)}
                     className={cn(
-                      "relative rounded-[1.5rem] p-4 text-left transition-all overflow-hidden",
+                      "relative rounded-[1.5rem] p-3 text-left transition-all overflow-hidden",
                       sActive ? "ring-[3px] ring-offset-2 ring-offset-[var(--bg-app)]" : "opacity-75 hover:opacity-90 active:scale-95"
                     )}
-                    style={{
-                      background: s.gradient,
-                      ringColor: s.id === 'algebra' ? '#4361ee' : s.id === 'geometry' ? '#7209b7' : s.id === 'russian' ? '#06b6d4' : '#f77f00'
-                    }}
+                    style={{ background: s.gradient }}
                   >
-                    <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full bg-white/10" />
-                    <div className="text-2xl mb-2">{s.emoji}</div>
-                    <div className="text-white font-black text-sm leading-tight">{s.title[lang]}</div>
-                    <div className="flex items-center gap-1.5 mt-2">
-                      <div className="flex-1 h-1.5 bg-white/25 rounded-full overflow-hidden">
+                    <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full bg-white/10" />
+                    <div className="text-2xl mb-1">{s.emoji}</div>
+                    <div className="text-white font-black text-xs leading-tight">{s.title[lang]}</div>
+                    <div className="flex items-center gap-1 mt-1.5">
+                      <div className="flex-1 h-1 bg-white/25 rounded-full overflow-hidden">
                         <div className="h-full bg-white/80 rounded-full" style={{ width: `${sTotal > 0 ? Math.round(sStudied / sTotal * 100) : 0}%` }} />
                       </div>
-                      <span className="text-white/70 text-[10px] font-black">{sStudied}/{sTotal}</span>
+                      <span className="text-white/70 text-[9px] font-black">{sStudied}/{sTotal}</span>
                     </div>
                   </button>
                 );
@@ -300,7 +409,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Active subject info */}
           <div className="glass-card rounded-[1.5rem] p-4 card-shadow flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0" style={{ background: subj.gradient }}>
               {subj.emoji}
@@ -308,7 +416,7 @@ export default function App() {
             <div className="flex-1 min-w-0">
               <div className="font-black text-[var(--text-main)] text-sm">{subj.title[lang]}</div>
               <div className="flex items-center gap-2 mt-1.5">
-                <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                <div className="flex-1 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                   <div className="h-full rounded-full transition-all duration-700" style={{ width: `${progressPct}%`, background: subj.gradient }} />
                 </div>
                 <span className="text-[10px] font-black text-[var(--text-muted)]">{progressPct}%</span>
@@ -316,7 +424,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Main action — Full Exam */}
           <button 
             onClick={() => startExam('exam')}
             className="w-full neon-gradient text-white px-6 py-5 rounded-[1.5rem] flex items-center justify-between group transition-all neon-glow active:scale-95"
@@ -327,13 +434,16 @@ export default function App() {
               </div>
               <div className="text-left">
                 <div className="font-black text-lg leading-none">{lang === 'ru' ? 'Полный экзамен' : 'Толук сынак'}</div>
-                <div className="text-white/70 text-[11px] font-bold mt-1 uppercase tracking-wider">{lang === 'ru' ? '20 вопросов • 40 минут' : '20 суроо • 40 мүнөт'}</div>
+                <div className="text-white/70 text-[11px] font-bold mt-1 uppercase tracking-wider">
+                  {currentSubject === 'russian'
+                    ? (lang === 'ru' ? '30 вопросов • 60 минут' : '30 суроо • 60 мүнөт')
+                    : (lang === 'ru' ? '25 вопросов • 40 минут' : '25 суроо • 40 мүнөт')}
+                </div>
               </div>
             </div>
             <ChevronRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
           </button>
 
-          {/* Secondary actions */}
           <div className="grid grid-cols-1 gap-3">
             <button 
               onClick={() => setState('drill_selector')}
@@ -437,8 +547,8 @@ export default function App() {
                 const isSelected = userChoice === opt.id;
                 const isCorrect = opt.id === question.correctAnswer;
                 
-                let btnStyle = {};
-                let btnClass = "w-full p-5 rounded-[2rem] border-2 text-left transition-all flex items-center justify-between group relative overflow-hidden";
+                let btnStyle: React.CSSProperties = {};
+                const btnClass = "w-full p-5 rounded-[2rem] border-2 text-left transition-all flex items-center justify-between group relative overflow-hidden";
                 
                 if (showSolution) {
                   if (isCorrect) {
@@ -446,12 +556,12 @@ export default function App() {
                   } else if (isSelected) {
                     btnStyle = { backgroundColor: 'var(--wrong-bg)', borderColor: 'var(--wrong-text)', color: 'var(--wrong-text)' };
                   } else {
-                    btnStyle = { opacity: 0.5, borderColor: 'var(--card-border)' };
+                    btnStyle = { opacity: 0.4, borderColor: 'var(--card-border)', backgroundColor: 'var(--card-bg)', color: 'var(--text-main)' };
                   }
                 } else if (isSelected) {
                   btnStyle = { backgroundColor: 'var(--selected-bg)', borderColor: 'var(--selected-text)', color: 'var(--selected-text)' };
                 } else {
-                  btnStyle = { backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' };
+                  btnStyle = { backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text-main)' };
                 }
 
                 return (
@@ -492,7 +602,7 @@ export default function App() {
                 value={shortAnswer}
                 onChange={(e) => setShortAnswer(e.target.value)}
                 disabled={showSolution}
-                placeholder={lang === 'ru' ? 'Введите число...' : 'Санды жазыңыз...'}
+                placeholder={lang === 'ru' ? 'Введите ответ...' : 'Жооп жазыңыз...'}
                 className="w-full p-5 rounded-[2rem] border-2 border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--input-text)] focus:border-blue-500 outline-none font-bold text-xl transition-all"
               />
               {!showSolution && (
@@ -528,9 +638,9 @@ export default function App() {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     key={i} 
-                    className="bg-blue-50 dark:bg-blue-900/20 p-5 rounded-[2rem] border border-blue-100 dark:border-blue-900/50 text-blue-800 dark:text-blue-300 text-sm font-medium flex items-start"
+                    className="bg-blue-50 dark:bg-blue-900/20 p-5 rounded-[2rem] border border-blue-100 dark:border-blue-900/50 text-blue-900 dark:text-blue-300 text-sm font-medium flex items-start"
                   >
-                    <span className="bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-200 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black mr-4 mt-0.5 shrink-0">
+                    <span className="bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black mr-4 mt-0.5 shrink-0">
                       {i + 1}
                     </span>
                     <MathText text={hint[lang]} />
@@ -543,7 +653,7 @@ export default function App() {
                   {hintIndex < (question.hints?.length || 0) && (
                     <button 
                       onClick={() => setHintIndex(prev => prev + 1)}
-                      className="w-full bg-white dark:bg-slate-800 border-2 border-blue-500 text-blue-600 dark:text-blue-400 py-5 rounded-[2rem] font-black"
+                      className="w-full bg-[var(--card-bg)] border-2 border-blue-500 text-blue-600 dark:text-blue-400 py-5 rounded-[2rem] font-black"
                     >
                       {lang === 'ru' ? 'Показать подсказку' : 'Кеңеш көрсөтүү'}
                     </button>
@@ -559,7 +669,7 @@ export default function App() {
 
               {showSolution && (
                 <div className="grid grid-cols-1 gap-3">
-                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center mb-2">
+                  <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest text-center mb-2">
                     {lang === 'ru' ? 'Как вы справились?' : 'Кантип аткардыңыз?'}
                   </p>
                   <button onClick={() => handleSelfGrade('full')} className="bg-green-600 text-white py-4 rounded-2xl font-black active:scale-95 transition-transform">
@@ -587,15 +697,15 @@ export default function App() {
                   <div className="neon-gradient p-2.5 rounded-xl shadow-lg shadow-blue-500/20">
                     <BookOpen className="w-5 h-5 text-white" />
                   </div>
-                  <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-wider text-sm">
+                  <h3 className="font-black text-[var(--text-main)] uppercase tracking-wider text-sm">
                     {lang === 'ru' ? 'Разбор решения' : 'Чыгарылышын талдоо'}
                   </h3>
                 </div>
-                <div className="space-y-6 text-slate-700 dark:text-slate-300 font-medium leading-relaxed">
+                <div className="space-y-6 font-medium leading-relaxed text-[var(--text-main)]">
                   {question.solution ? (
                     question.solution[lang].map((step, i) => (
                       <div key={i} className="flex space-x-5">
-                        <span className="text-blue-500 dark:text-blue-400 font-black text-xl">{i + 1}.</span>
+                        <span className="text-blue-500 dark:text-blue-400 font-black text-xl shrink-0">{i + 1}.</span>
                         <div className="pt-0.5">
                           <MathText text={step} />
                         </div>
@@ -610,14 +720,13 @@ export default function App() {
                 
                 {TOPICS.find(t => t.id === question.topic) && (
                   <button 
-                    onClick={() => {
-                      setCurrentTopicId(question.topic);
-                      setState('learn_topic');
-                    }}
+                    onClick={() => goToLearnTopic(question.topic)}
                     className="w-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 py-5 rounded-[2rem] font-black flex items-center justify-center border border-blue-100 dark:border-blue-900/50"
                   >
                     <BookOpen className="w-5 h-5 mr-3" />
-                    {lang === 'ru' ? `Изучить: ${TOPICS.find(t => t.id === question.topic)?.title.ru}` : `Изилдөө: ${TOPICS.find(t => t.id === question.topic)?.title.ky}`}
+                    {lang === 'ru' 
+                      ? `Изучить: ${TOPICS.find(t => t.id === question.topic)?.title.ru}` 
+                      : `Изилдөө: ${TOPICS.find(t => t.id === question.topic)?.title.ky}`}
                   </button>
                 )}
               </motion.div>
@@ -627,23 +736,43 @@ export default function App() {
 
         <footer className="px-5 py-4 border-t border-[var(--card-border)] bg-[var(--bg-app)]/90 backdrop-blur-md sticky bottom-0">
           {!showSolution ? (
-            <button 
-              onClick={skipQuestion}
-              className="w-full py-3.5 text-[var(--text-muted)] font-black uppercase tracking-widest text-xs hover:text-[var(--text-main)] transition-colors"
-            >
-              {lang === 'ru' ? 'Пропустить →' : 'Өткөрүп жиберүү →'}
-            </button>
+            <div className="flex items-center gap-3">
+              {currentIndex > 0 && (
+                <button
+                  onClick={prevQuestion}
+                  className="p-4 rounded-[1.5rem] border-2 border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+              )}
+              <button 
+                onClick={skipQuestion}
+                className="flex-1 py-3.5 text-[var(--text-muted)] font-black uppercase tracking-widest text-xs hover:text-[var(--text-main)] transition-colors"
+              >
+                {lang === 'ru' ? 'Пропустить →' : 'Өткөрүп жиберүү →'}
+              </button>
+            </div>
           ) : (
-            <button 
-              onClick={nextQuestion}
-              className="w-full text-white py-5 rounded-[1.5rem] font-black flex items-center justify-center transition-all active:scale-95 shadow-lg"
-              style={{ background: subj.gradient }}
-            >
-              {currentIndex === currentQuestions.length - 1 
-                ? (lang === 'ru' ? 'Завершить' : 'Аяктоо') 
-                : (lang === 'ru' ? 'Далее' : 'Кийинки')}
-              <ChevronRight className="w-5 h-5 ml-2" />
-            </button>
+            <div className="flex items-center gap-3">
+              {currentIndex > 0 && (
+                <button
+                  onClick={prevQuestion}
+                  className="p-4 rounded-[1.5rem] border-2 border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+              )}
+              <button 
+                onClick={nextQuestion}
+                className="flex-1 text-white py-5 rounded-[1.5rem] font-black flex items-center justify-center transition-all active:scale-95 shadow-lg"
+                style={{ background: subj.gradient }}
+              >
+                {currentIndex === currentQuestions.length - 1 
+                  ? (lang === 'ru' ? 'Завершить' : 'Аяктоо') 
+                  : (lang === 'ru' ? 'Далее' : 'Кийинки')}
+                <ChevronRight className="w-5 h-5 ml-2" />
+              </button>
+            </div>
           )}
         </footer>
       </div>
@@ -651,13 +780,9 @@ export default function App() {
   };
 
   const renderResults = () => {
+    const allQ = getQuestionsForSubject(currentSubject);
     const score = Object.entries(answers).filter(([id, ans]) => {
-      let allQuestions: Question[] = [];
-      if (currentSubject === 'algebra') allQuestions = ALGEBRA_QUESTIONS;
-      if (currentSubject === 'geometry') allQuestions = GEOMETRY_QUESTIONS;
-      if (currentSubject === 'russian') allQuestions = RUSSIAN_QUESTIONS;
-      if (currentSubject === 'history') allQuestions = HISTORY_QUESTIONS;
-      const q = allQuestions.find(q => q.id === id);
+      const q = allQ.find(q => q.id === id);
       return q?.correctAnswer === ans;
     }).length;
 
@@ -676,29 +801,22 @@ export default function App() {
     return (
       <div className="p-6 space-y-8 flex-1 flex flex-col">
         <header className="text-center space-y-6 pt-8">
-          <h2 className="text-3xl font-black dark:text-white">{lang === 'ru' ? 'Ваш результат' : 'Сиздин жыйынтыгыңыз'}</h2>
+          <h2 className="text-3xl font-black text-[var(--text-main)]">{lang === 'ru' ? 'Ваш результат' : 'Сиздин жыйынтыгыңыз'}</h2>
           
           <div className="relative inline-flex items-center justify-center">
             <div className="w-48 h-48 rounded-full border-8 border-slate-100 dark:border-slate-800 flex items-center justify-center relative z-10">
               <div className="text-center">
                 <div className={cn("text-6xl font-black", grade.c)}>{grade.l}</div>
-                <div className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest mt-1">
+                <div className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mt-1">
                   {lang === 'ru' ? 'Оценка' : 'Баа'}
                 </div>
               </div>
             </div>
             <svg className="absolute inset-0 w-48 h-48 -rotate-90 z-20 pointer-events-none">
-              <circle
-                cx="96"
-                cy="96"
-                r="88"
-                fill="none"
-                stroke="url(#neonGradient)"
-                strokeWidth="8"
+              <circle cx="96" cy="96" r="88" fill="none" stroke="url(#neonGradient)" strokeWidth="8"
                 strokeDasharray={2 * Math.PI * 88}
                 strokeDashoffset={2 * Math.PI * 88 * (1 - percentage / 100)}
-                strokeLinecap="round"
-                className="transition-all duration-1000 ease-out"
+                strokeLinecap="round" className="transition-all duration-1000 ease-out"
               />
               <defs>
                 <linearGradient id="neonGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -713,20 +831,20 @@ export default function App() {
         <div className="grid grid-cols-2 gap-4">
           <div className="glass-card p-5 rounded-[2rem] text-center space-y-1">
             <div className="text-2xl font-black text-blue-600 dark:text-blue-400">{percentage}%</div>
-            <div className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">
+            <div className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">
               {lang === 'ru' ? 'Процент' : 'Пайыз'}
             </div>
           </div>
           <div className="glass-card p-5 rounded-[2rem] text-center space-y-1">
-            <div className="text-2xl font-black text-black dark:text-white">{score}/{total}</div>
-            <div className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">
+            <div className="text-2xl font-black text-[var(--text-main)]">{score}/{total}</div>
+            <div className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">
               {lang === 'ru' ? 'Баллы' : 'Баллдар'}
             </div>
           </div>
         </div>
 
         <div className="glass-card rounded-[2.5rem] p-8 space-y-6">
-          <h3 className="font-black text-black dark:text-white uppercase tracking-wider text-xs px-1">{lang === 'ru' ? 'Анализ по темам' : 'Темалар боюнча анализ'}</h3>
+          <h3 className="font-black text-[var(--text-main)] uppercase tracking-wider text-xs px-1">{lang === 'ru' ? 'Анализ по темам' : 'Темалар боюнча анализ'}</h3>
           <div className="space-y-6">
             {Array.from(new Set(currentQuestions.map(q => q.topic))).map(topic => {
               const topicQuestions = currentQuestions.filter(q => q.topic === topic);
@@ -737,10 +855,10 @@ export default function App() {
               return (
                 <div key={topic} className="space-y-3">
                   <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                    <span className="text-slate-600 dark:text-slate-400 truncate max-w-[150px]">
+                    <span className="text-[var(--text-muted)] truncate max-w-[160px]">
                       {topicData?.title[lang] || topic}
                     </span>
-                    <span className={cn(topicPercent >= 70 ? "text-green-600" : topicPercent >= 40 ? "text-yellow-600" : "text-red-600")}>
+                    <span className={cn(topicPercent >= 70 ? "text-green-600 dark:text-green-400" : topicPercent >= 40 ? "text-yellow-600 dark:text-yellow-400" : "text-red-600 dark:text-red-400")}>
                       {topicCorrect}/{topicQuestions.length}
                     </span>
                   </div>
@@ -767,7 +885,7 @@ export default function App() {
           
           <button 
             onClick={() => startExam('exam')}
-            className="w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-black dark:text-white py-6 rounded-[2rem] font-black active:scale-95 transition-transform flex items-center justify-center"
+            className="w-full bg-[var(--card-bg)] border-2 border-[var(--card-border)] text-[var(--text-main)] py-6 rounded-[2rem] font-black active:scale-95 transition-transform flex items-center justify-center"
           >
             <RotateCcw className="w-6 h-6 mr-3" />
             {lang === 'ru' ? 'Повторить экзамен' : 'Сынакты кайталоо'}
@@ -784,23 +902,23 @@ export default function App() {
     );
 
     return (
-      <div className="min-h-screen flex flex-col">
-        <header className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center sticky top-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md z-10">
-          <button onClick={() => setState('landing')} className="p-2 -ml-2 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+      <div className="min-h-screen flex flex-col bg-[var(--bg-app)]">
+        <header className="p-4 border-b border-[var(--card-border)] flex items-center sticky top-0 bg-[var(--bg-app)]/90 backdrop-blur-md z-10">
+          <button onClick={() => setState('landing')} className="p-2 -ml-2 text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors">
             <ArrowLeft className="w-7 h-7" />
           </button>
-          <h2 className="ml-4 font-black text-lg dark:text-white">{lang === 'ru' ? 'Учебник' : 'Окуу куралы'}</h2>
+          <h2 className="ml-4 font-black text-lg text-[var(--text-main)]">{lang === 'ru' ? 'Учебник' : 'Окуу куралы'}</h2>
         </header>
 
         <main className="p-6 space-y-6">
           <div className="relative">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-muted)]" />
             <input 
               type="text"
               placeholder={lang === 'ru' ? 'Поиск темы...' : 'Теманы издөө...'}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 pl-14 pr-6 py-5 rounded-[2rem] outline-none focus:border-blue-500 transition-all font-bold dark:text-white shadow-sm"
+              className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] pl-14 pr-6 py-5 rounded-[2rem] outline-none focus:border-blue-500 transition-all font-bold text-[var(--input-text)] shadow-sm"
             />
           </div>
 
@@ -814,6 +932,8 @@ export default function App() {
                 <button 
                   key={topic.id}
                   onClick={() => {
+                    setTopicCameFrom('topic_list');
+                    setSavedExamState(null);
                     setCurrentTopicId(topic.id);
                     setState('learn_topic');
                   }}
@@ -822,22 +942,22 @@ export default function App() {
                   <div className="flex items-center space-x-5">
                     <div className={cn(
                       "w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110",
-                      isMastered ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600" :
+                      isMastered ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400" :
                       isStudied ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400" : 
-                      "bg-slate-100 dark:bg-slate-800 text-slate-400"
+                      "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
                     )}>
                       {isMastered ? <Trophy className="w-6 h-6" /> : <BookOpen className="w-6 h-6" />}
                     </div>
                     <div className="text-left">
-                      <div className="font-black text-black dark:text-white text-lg leading-tight">{topic.title[lang]}</div>
-                      <div className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest mt-1">
+                      <div className="font-black text-[var(--text-main)] text-base leading-tight">{topic.title[lang]}</div>
+                      <div className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mt-1">
                         {isMastered ? (lang === 'ru' ? 'Освоено' : 'Өздөштүрүлдү') : 
                          isStudied ? (lang === 'ru' ? 'Изучено' : 'Изилденди') : 
                          (lang === 'ru' ? 'Не изучено' : 'Изилденген жок')}
                       </div>
                     </div>
                   </div>
-                  <ChevronRight className="w-6 h-6 text-slate-300 group-hover:translate-x-1 transition-transform" />
+                  <ChevronRight className="w-6 h-6 text-[var(--text-muted)] group-hover:translate-x-1 transition-transform" />
                 </button>
               );
             })}
@@ -851,29 +971,36 @@ export default function App() {
     const topic = TOPICS.find(t => t.id === currentTopicId);
     if (!topic) return null;
 
+    const cameFromExam = savedExamState !== null;
+
     return (
-      <div className="min-h-screen flex flex-col">
-        <header className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center sticky top-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md z-10">
-          <button onClick={() => setState('topic_list')} className="p-2 -ml-2 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+      <div className="min-h-screen flex flex-col bg-[var(--bg-app)]">
+        <header className="p-4 border-b border-[var(--card-border)] flex items-center sticky top-0 bg-[var(--bg-app)]/90 backdrop-blur-md z-10">
+          <button onClick={returnFromLearnTopic} className="p-2 -ml-2 text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors">
             <ArrowLeft className="w-7 h-7" />
           </button>
-          <h2 className="ml-4 font-black text-lg truncate dark:text-white">{topic.title[lang]}</h2>
+          <div className="ml-4 flex-1 min-w-0">
+            <h2 className="font-black text-lg truncate text-[var(--text-main)]">{topic.title[lang]}</h2>
+            {cameFromExam && (
+              <p className="text-[10px] text-blue-500 font-bold uppercase tracking-widest">
+                {lang === 'ru' ? '← Вернуться в экзамен' : '← Сынакка кайтуу'}
+              </p>
+            )}
+          </div>
         </header>
 
-        <main className="flex-1 p-6 space-y-10 overflow-y-auto pb-32">
-          {/* Section 1: WHAT IS IT */}
+        <main className="flex-1 p-6 space-y-10 overflow-y-auto pb-36">
           <section className="space-y-4">
-            <h3 className="text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-[0.2em] px-1">
+            <h3 className="text-xs font-black text-[var(--text-muted)] uppercase tracking-[0.2em] px-1">
               {lang === 'ru' ? 'Что это такое?' : 'Бул эмне?'}
             </h3>
-            <div className="text-lg font-bold text-slate-900 dark:text-slate-100 leading-relaxed">
+            <div className="text-lg font-semibold text-[var(--text-main)] leading-relaxed">
               <MathText text={topic.whatIsIt[lang]} />
             </div>
           </section>
 
-          {/* Section 2: THE FORMULA */}
           <section className="space-y-4">
-            <h3 className="text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-[0.2em] px-1">
+            <h3 className="text-xs font-black text-[var(--text-muted)] uppercase tracking-[0.2em] px-1">
               {topic.formula.title[lang]}
             </h3>
             <div className="neon-gradient p-10 rounded-[2.5rem] shadow-2xl shadow-blue-500/20 text-center relative overflow-hidden">
@@ -884,59 +1011,69 @@ export default function App() {
             </div>
           </section>
 
-          {/* Section 3: WORKED EXAMPLE */}
           <section className="space-y-4">
-            <h3 className="text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-[0.2em] px-1">
+            <h3 className="text-xs font-black text-[var(--text-muted)] uppercase tracking-[0.2em] px-1">
               {lang === 'ru' ? 'Разбор примера' : 'Мисалдын талдоосу'}
             </h3>
             <div className="glass-card rounded-[2.5rem] p-8 space-y-8">
               <div className="space-y-8">
-                <div className="text-xl font-black text-black dark:text-white">
+                <div className="text-xl font-black text-[var(--text-main)]">
                   <MathText text={topic.example.problem[lang]} />
                 </div>
                 {topic.example.steps.map((step, i) => (
-                  <div key={i} className="space-y-3">
-                    <div className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">{step.step}</div>
-                    <div className="text-2xl font-black text-black dark:text-white">
+                  <div key={i} className="space-y-2">
+                    <div className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">
+                      <MathText text={step.step} />
+                    </div>
+                    <div className="text-2xl font-black text-[var(--text-main)]">
                       <MathText text={step.math} />
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="pt-6 border-t border-slate-200 dark:border-slate-800">
-                <div className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-2">
+              <div className="pt-6 border-t border-[var(--card-border)]">
+                <div className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-2">
                   {lang === 'ru' ? 'Ответ' : 'Жообу'}
                 </div>
-                <div className="text-3xl font-black text-black dark:text-white">
+                <div className="text-3xl font-black text-[var(--text-main)]">
                   <MathText text={topic.example.answer} />
                 </div>
               </div>
             </div>
           </section>
 
-          {/* Section 4: COMMON MISTAKES */}
           <section className="space-y-4">
-            <h3 className="text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-[0.2em] px-1">
+            <h3 className="text-xs font-black text-[var(--text-muted)] uppercase tracking-[0.2em] px-1">
               {lang === 'ru' ? 'Частые ошибки' : 'Көп кездешкен каталар'}
             </h3>
             <div className="space-y-3">
               {topic.commonMistakes[lang].map((mistake, i) => (
                 <div key={i} className="flex items-start space-x-4 bg-red-50 dark:bg-red-900/20 p-5 rounded-[2rem] border border-red-100 dark:border-red-900/50">
                   <XCircle className="w-6 h-6 text-red-500 mt-0.5 shrink-0" />
-                  <p className="text-sm font-bold text-red-800 dark:text-red-300 leading-relaxed">{mistake}</p>
+                  <p className="text-sm font-semibold text-red-800 dark:text-red-300 leading-relaxed">{mistake}</p>
                 </div>
               ))}
             </div>
           </section>
         </main>
 
-        <footer className="p-6 border-t border-slate-100 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md fixed bottom-0 left-0 right-0 max-w-md mx-auto z-20">
+        <footer className="p-6 border-t border-[var(--card-border)] bg-[var(--bg-app)]/90 backdrop-blur-md fixed bottom-0 left-0 right-0 max-w-2xl mx-auto z-20 space-y-3">
+          {cameFromExam && (
+            <button
+              onClick={returnFromLearnTopic}
+              className="w-full bg-[var(--card-bg)] border-2 border-[var(--card-border)] text-[var(--text-main)] py-4 rounded-[1.5rem] font-black flex items-center justify-center active:scale-95 transition-transform"
+            >
+              <ChevronLeft className="w-5 h-5 mr-2" />
+              {lang === 'ru' ? 'Вернуться в экзамен' : 'Сынакка кайтуу'}
+            </button>
+          )}
           <button 
             onClick={() => {
               markTopicAsStudied(topic.id);
+              setSavedExamState(null);
               startExam('drill_selector', topic.id);
             }}
-            className="w-full neon-gradient text-white py-6 rounded-[2rem] font-black shadow-2xl shadow-blue-500/20 active:scale-95 transition-transform flex items-center justify-center"
+            className="w-full neon-gradient text-white py-5 rounded-[2rem] font-black shadow-2xl shadow-blue-500/20 active:scale-95 transition-transform flex items-center justify-center"
           >
             {lang === 'ru' ? 'Практика по теме' : 'Тема боюнча машыгуу'}
             <ChevronRight className="w-6 h-6 ml-3" />
@@ -947,20 +1084,16 @@ export default function App() {
   };
 
   const renderDrillSelector = () => {
-    let allQuestions: Question[] = [];
-    if (currentSubject === 'algebra') allQuestions = ALGEBRA_QUESTIONS;
-    if (currentSubject === 'geometry') allQuestions = GEOMETRY_QUESTIONS;
-    if (currentSubject === 'russian') allQuestions = RUSSIAN_QUESTIONS;
-    if (currentSubject === 'history') allQuestions = HISTORY_QUESTIONS;
+    const allQuestions = getQuestionsForSubject(currentSubject);
     const topics = Array.from(new Set(allQuestions.map(q => q.topic)));
     
     return (
-      <div className="min-h-screen flex flex-col">
-        <header className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center sticky top-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md z-10">
-          <button onClick={() => setState('landing')} className="p-2 -ml-2 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+      <div className="min-h-screen flex flex-col bg-[var(--bg-app)]">
+        <header className="p-4 border-b border-[var(--card-border)] flex items-center sticky top-0 bg-[var(--bg-app)]/90 backdrop-blur-md z-10">
+          <button onClick={() => setState('landing')} className="p-2 -ml-2 text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors">
             <ArrowLeft className="w-7 h-7" />
           </button>
-          <h2 className="ml-4 font-black text-lg dark:text-white">{lang === 'ru' ? 'Выбор темы' : 'Теманы тандоо'}</h2>
+          <h2 className="ml-4 font-black text-lg text-[var(--text-main)]">{lang === 'ru' ? 'Выбор темы' : 'Теманы тандоо'}</h2>
         </header>
 
         <main className="p-6 space-y-6">
@@ -976,24 +1109,26 @@ export default function App() {
                   className="glass-card p-6 rounded-[2.5rem] flex flex-col space-y-6 group"
                 >
                   <div className="flex items-center justify-between">
-                    <div className="text-left space-y-2">
-                      <div className="font-black text-black dark:text-white text-lg leading-tight">
+                    <div className="text-left space-y-2 flex-1 min-w-0 pr-4">
+                      <div className="font-black text-[var(--text-main)] text-base leading-tight">
                         {topicData?.title[lang] || topic.replace(/_/g, ' ')}
                       </div>
                       <div className="flex items-center space-x-4">
                         <div className="w-32 h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
                           <div className="h-full neon-gradient" style={{ width: `${percent}%` }} />
                         </div>
-                        <span className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">{percent}%</span>
+                        <span className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">{percent}%</span>
                       </div>
                     </div>
                     {topicData && (
                       <button 
                         onClick={() => {
+                          setTopicCameFrom('drill_selector');
+                          setSavedExamState(null);
                           setCurrentTopicId(topic);
                           setState('learn_topic');
                         }}
-                        className="bg-blue-100 dark:bg-blue-900/30 p-4 rounded-2xl text-blue-600 dark:text-blue-400 hover:scale-110 transition-transform"
+                        className="bg-blue-100 dark:bg-blue-900/30 p-4 rounded-2xl text-blue-600 dark:text-blue-400 hover:scale-110 transition-transform flex-shrink-0"
                       >
                         <BookOpen className="w-6 h-6" />
                       </button>
@@ -1015,25 +1150,164 @@ export default function App() {
     );
   };
 
+  const renderAdminPanel = () => {
+    const data = getAnalytics();
+    const totalSessions = data.sessionCount || 0;
+    const sessions: any[] = data.sessions || [];
+    const today = new Date().toISOString().slice(0, 10);
+    const todaySessions = sessions.filter((s: any) => s.date === today);
+    const todayQuestions = todaySessions.reduce((sum: number, s: any) => sum + (s.questions || 0), 0);
+    const totalQAnswered = sessions.reduce((sum: number, s: any) => sum + (s.questions || 0), 0);
+    const avgPerSession = totalSessions > 0 ? Math.round(totalQAnswered / totalSessions) : 0;
+
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      const dateStr = d.toISOString().slice(0, 10);
+      const daySessions = sessions.filter((s: any) => s.date === dateStr);
+      return { date: dateStr.slice(5), questions: daySessions.reduce((sum: number, s: any) => sum + (s.questions || 0), 0) };
+    });
+    const maxQ = Math.max(...last7Days.map(d => d.questions), 1);
+
+    const subjectStats = {
+      algebra: progress.topicStats ? Object.keys(progress.topicStats).filter(k => ALGEBRA_QUESTIONS.some(q => q.topic === k)).reduce((s, k) => s + (progress.topicStats[k]?.total || 0), 0) : 0,
+      geometry: progress.topicStats ? Object.keys(progress.topicStats).filter(k => GEOMETRY_QUESTIONS.some(q => q.topic === k)).reduce((s, k) => s + (progress.topicStats[k]?.total || 0), 0) : 0,
+      russian: progress.topicStats ? Object.keys(progress.topicStats).filter(k => RUSSIAN_QUESTIONS.some(q => q.topic === k)).reduce((s, k) => s + (progress.topicStats[k]?.total || 0), 0) : 0,
+    };
+
+    return (
+      <div className="min-h-screen flex flex-col bg-[var(--bg-app)]">
+        <header className="p-4 border-b border-[var(--card-border)] flex items-center sticky top-0 bg-[var(--bg-app)]/90 backdrop-blur-md z-10">
+          <button onClick={() => setState('landing')} className="p-2 -ml-2 text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors">
+            <ArrowLeft className="w-7 h-7" />
+          </button>
+          <div className="ml-4">
+            <h2 className="font-black text-lg text-[var(--text-main)]">
+              {lang === 'ru' ? 'Аналитика' : 'Аналитика'}
+            </h2>
+            <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-widest">
+              {lang === 'ru' ? 'Только это устройство' : 'Бул түзмөк гана'}
+            </p>
+          </div>
+          <div className="ml-auto">
+            <ShieldCheck className="w-6 h-6 text-blue-500" />
+          </div>
+        </header>
+
+        <main className="p-6 space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              { icon: <Users className="w-5 h-5 text-blue-500" />, value: totalSessions, label: lang === 'ru' ? 'Сессий всего' : 'Жалпы сессия', bg: 'bg-blue-500/10' },
+              { icon: <Target className="w-5 h-5 text-emerald-500" />, value: todayQuestions, label: lang === 'ru' ? 'Сегодня вопросов' : 'Бүгүн суроолор', bg: 'bg-emerald-500/10' },
+              { icon: <TrendingUp className="w-5 h-5 text-violet-500" />, value: totalQAnswered, label: lang === 'ru' ? 'Ответов всего' : 'Жалпы жооп', bg: 'bg-violet-500/10' },
+              { icon: <BarChart3 className="w-5 h-5 text-orange-500" />, value: avgPerSession, label: lang === 'ru' ? 'Ср. за сессию' : 'Орточо сессияда', bg: 'bg-orange-500/10' },
+            ].map((item, i) => (
+              <div key={i} className="glass-card p-5 rounded-[2rem] space-y-2">
+                <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center", item.bg)}>
+                  {item.icon}
+                </div>
+                <div className="text-2xl font-black text-[var(--text-main)]">{item.value}</div>
+                <div className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">{item.label}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="glass-card p-6 rounded-[2.5rem] space-y-4">
+            <h3 className="font-black text-[var(--text-main)] text-xs uppercase tracking-widest">
+              {lang === 'ru' ? 'Активность за 7 дней' : '7 күн активдүүлүгү'}
+            </h3>
+            <div className="flex items-end gap-2 h-24">
+              {last7Days.map((d, i) => (
+                <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                  <div 
+                    className="w-full neon-gradient rounded-t-lg transition-all"
+                    style={{ height: `${Math.max((d.questions / maxQ) * 80, d.questions > 0 ? 8 : 0)}px` }}
+                  />
+                  <span className="text-[9px] font-black text-[var(--text-muted)]">{d.date}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="glass-card p-6 rounded-[2.5rem] space-y-4">
+            <h3 className="font-black text-[var(--text-main)] text-xs uppercase tracking-widest">
+              {lang === 'ru' ? 'По предметам' : 'Предметтер боюнча'}
+            </h3>
+            {[
+              { id: 'algebra', label: lang === 'ru' ? 'Алгебра' : 'Алгебра', count: subjectStats.algebra, color: 'bg-blue-500' },
+              { id: 'geometry', label: lang === 'ru' ? 'Геометрия' : 'Геометрия', count: subjectStats.geometry, color: 'bg-violet-500' },
+              { id: 'russian', label: lang === 'ru' ? 'Русский язык' : 'Орус тили', count: subjectStats.russian, color: 'bg-teal-500' },
+            ].map((s) => {
+              const total = subjectStats.algebra + subjectStats.geometry + subjectStats.russian || 1;
+              return (
+                <div key={s.id} className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm font-bold text-[var(--text-main)]">{s.label}</span>
+                    <span className="text-sm font-black text-[var(--text-muted)]">{s.count}</span>
+                  </div>
+                  <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className={cn("h-full rounded-full", s.color)} style={{ width: `${(s.count / total) * 100}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="glass-card p-6 rounded-[2.5rem] space-y-3">
+            <h3 className="font-black text-[var(--text-main)] text-xs uppercase tracking-widest">
+              {lang === 'ru' ? 'Прогресс пользователя' : 'Колдонуучунун илгерилеши'}
+            </h3>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="font-bold text-[var(--text-main)]">{lang === 'ru' ? 'Серия дней' : 'Күн катары'}</span>
+                <span className="font-black text-orange-500">{progress.streak} {lang === 'ru' ? 'дн.' : 'күн'}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="font-bold text-[var(--text-main)]">{lang === 'ru' ? 'Ошибок в базе' : 'Каталар'}</span>
+                <span className="font-black text-red-500">{progress.mistakes.length}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="font-bold text-[var(--text-main)]">{lang === 'ru' ? 'Тем изучено' : 'Тема изилденди'}</span>
+                <span className="font-black text-green-500">{progress.studiedTopics.length}</span>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              if (confirm(lang === 'ru' ? 'Сбросить данные аналитики?' : 'Аналитика маалыматтарын тазалоо?')) {
+                saveAnalytics({ sessions: [], sessionCount: 0 });
+              }
+            }}
+            className="w-full py-4 rounded-[1.5rem] border-2 border-red-200 dark:border-red-900/50 text-red-500 font-black"
+          >
+            {lang === 'ru' ? 'Сбросить аналитику' : 'Аналитиканы тазалоо'}
+          </button>
+        </main>
+      </div>
+    );
+  };
+
   return (
-    <div className={cn("min-h-screen transition-colors duration-300 selection:bg-blue-100 dark:selection:bg-blue-900/30", darkMode ? "dark bg-slate-900" : "bg-slate-50")}>
-      <div className="max-w-md mx-auto min-h-screen flex flex-col relative">
+    <div className={cn("min-h-screen transition-colors duration-300 selection:bg-blue-100 dark:selection:bg-blue-900/30", darkMode ? "dark bg-slate-900" : "bg-[var(--bg-app)]")}>
+      <div className="max-w-2xl mx-auto min-h-screen flex flex-col relative">
         <AnimatePresence mode="wait">
           <motion.div
             key={state}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
             className="flex-1 flex flex-col"
           >
-            {state === 'landing' && renderLanding()}
-            {state === 'exam' && renderExam()}
-            {state === 'results' && renderResults()}
+            {state === 'landing'        && renderLanding()}
+            {state === 'exam'           && renderExam()}
+            {state === 'results'        && renderResults()}
             {state === 'drill_selector' && renderDrillSelector()}
             {state === 'mistake_review' && renderExam()}
-            {state === 'topic_list' && renderTopicList()}
-            {state === 'learn_topic' && renderTopicExplanation()}
+            {state === 'topic_list'     && renderTopicList()}
+            {state === 'learn_topic'    && renderTopicExplanation()}
+            {state === 'admin'          && renderAdminPanel()}
           </motion.div>
         </AnimatePresence>
       </div>
