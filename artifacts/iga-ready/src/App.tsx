@@ -1085,9 +1085,9 @@ export default function App() {
             </h3>
             <div className="space-y-3">
               {topic.commonMistakes[lang].map((mistake, i) => (
-                <div key={i} className="flex items-start space-x-4 bg-red-50 dark:bg-red-900/20 p-5 rounded-[2rem] border border-red-200 dark:border-red-900/50">
+                <div key={i} className="flex items-start space-x-4 p-5 rounded-[2rem]" style={{ background: darkMode ? 'rgba(153,27,27,0.15)' : '#ffffff', borderLeft: '4px solid #ef4444', border: darkMode ? '1px solid rgba(153,27,27,0.4)' : '1px solid #fecaca', borderLeftWidth: '4px', borderLeftColor: '#ef4444' }}>
                   <XCircle className="w-6 h-6 text-red-500 mt-0.5 shrink-0" />
-                  <p className="text-sm font-semibold text-slate-800 dark:text-red-200 leading-relaxed">{mistake}</p>
+                  <p className="text-sm font-semibold leading-relaxed" style={{ color: darkMode ? '#fca5a5' : '#111827' }}>{mistake}</p>
                 </div>
               ))}
             </div>
