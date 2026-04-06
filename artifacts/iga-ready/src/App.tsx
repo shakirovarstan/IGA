@@ -83,8 +83,37 @@ export default function App() {
   const logoClickTimer   = useRef<any>(null);
   const [adminPassword, setAdminPassword] = useState('');
   const [showAdminPrompt, setShowAdminPrompt] = useState(false);
+  const [visitorId] = useState<string>(() => {
+    let id = localStorage.getItem('iga_visitor_id');
+    if (!id) { id = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('iga_visitor_id', id); }
+    return id;
+  });
+  const [sessionId] = useState<string>(() => {
+    let id = sessionStorage.getItem('iga_session_id');
+    if (!id) { id = Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem('iga_session_id', id); }
+    return id;
+  });
+  const [globalStats, setGlobalStats] = useState<any>(null);
+  const [globalStatsLoading, setGlobalStatsLoading] = useState(false);
 
   const { progress, updateProgress, markTopicAsStudied } = useProgress();
+
+  const trackEvent = (eventType: string, extra: { subject?: string; is_correct?: boolean; topic?: string } = {}) => {
+    fetch('/api/analytics/event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event_type: eventType, visitor_id: visitorId, session_id: sessionId, ...extra }),
+    }).catch(() => {});
+  };
+
+  const fetchGlobalStats = async () => {
+    setGlobalStatsLoading(true);
+    try {
+      const res = await fetch('/api/analytics/stats', { headers: { 'x-admin-secret': 'iga2025' } });
+      if (res.ok) setGlobalStats(await res.json());
+    } catch {}
+    setGlobalStatsLoading(false);
+  };
 
   // Track session analytics
   useEffect(() => {
@@ -93,11 +122,16 @@ export default function App() {
     const today = new Date().toISOString().slice(0, 10);
     data.sessions = [...(data.sessions || []).slice(-99), { date: today, questions: 0 }];
     saveAnalytics(data);
+    trackEvent('page_view');
   }, []);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
   }, [darkMode]);
+
+  useEffect(() => {
+    if (state === 'admin') fetchGlobalStats();
+  }, [state]);
 
   useEffect(() => {
     let timer: any;
@@ -197,13 +231,14 @@ export default function App() {
       const stats = progress.topicStats[question.topic] || { correct: 0, total: 0 };
       if (stats.correct + 1 >= 3) markTopicAsStudied(question.topic);
     }
-    // Track analytics
+    // Track analytics (local + global)
     const data = getAnalytics();
     if (data.sessions.length > 0) {
       data.sessions[data.sessions.length - 1].questions = 
         (data.sessions[data.sessions.length - 1].questions || 0) + 1;
       saveAnalytics(data);
     }
+    trackEvent('question_answered', { subject: currentSubject, is_correct: isCorrect, topic: question.topic });
   };
 
   const handleShortSubmit = () => {
@@ -213,6 +248,7 @@ export default function App() {
     setAnswers(prev => ({ ...prev, [question.id]: shortAnswer }));
     setShowSolution(true);
     updateProgress(question.topic, isCorrect, question.id);
+    trackEvent('question_answered', { subject: currentSubject, is_correct: isCorrect, topic: question.topic });
   };
 
   const handleSelfGrade = (grade: 'full' | 'partial' | 'none') => {
@@ -221,6 +257,7 @@ export default function App() {
     setAnswers(prev => ({ ...prev, [question.id]: grade }));
     setShowSolution(true);
     updateProgress(question.topic, isCorrect, question.id);
+    trackEvent('question_answered', { subject: currentSubject, is_correct: isCorrect, topic: question.topic });
     nextQuestion();
   };
 
@@ -522,10 +559,10 @@ export default function App() {
 
           {isTimerActive ? (
             <div className={cn(
-              "font-mono font-black px-3 py-1.5 rounded-xl text-sm", 
+              "font-mono font-black px-3 py-1.5 rounded-xl text-sm border", 
               timeLeft < 300 
-                ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 animate-pulse" 
-                : "bg-slate-100 dark:bg-slate-800 text-[var(--text-main)]"
+                ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 animate-pulse" 
+                : "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border-slate-300 dark:border-slate-700"
             )}>
               {formatTime(timeLeft)}
             </div>
@@ -1048,9 +1085,9 @@ export default function App() {
             </h3>
             <div className="space-y-3">
               {topic.commonMistakes[lang].map((mistake, i) => (
-                <div key={i} className="flex items-start space-x-4 bg-red-50 dark:bg-red-900/20 p-5 rounded-[2rem] border border-red-100 dark:border-red-900/50">
+                <div key={i} className="flex items-start space-x-4 bg-red-50 dark:bg-red-900/20 p-5 rounded-[2rem] border border-red-200 dark:border-red-900/50">
                   <XCircle className="w-6 h-6 text-red-500 mt-0.5 shrink-0" />
-                  <p className="text-sm font-semibold text-red-800 dark:text-red-300 leading-relaxed">{mistake}</p>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-red-200 leading-relaxed">{mistake}</p>
                 </div>
               ))}
             </div>
@@ -1151,29 +1188,32 @@ export default function App() {
   };
 
   const renderAdminPanel = () => {
-    const data = getAnalytics();
-    const totalSessions = data.sessionCount || 0;
-    const sessions: any[] = data.sessions || [];
-    const today = new Date().toISOString().slice(0, 10);
-    const todaySessions = sessions.filter((s: any) => s.date === today);
-    const todayQuestions = todaySessions.reduce((sum: number, s: any) => sum + (s.questions || 0), 0);
-    const totalQAnswered = sessions.reduce((sum: number, s: any) => sum + (s.questions || 0), 0);
-    const avgPerSession = totalSessions > 0 ? Math.round(totalQAnswered / totalSessions) : 0;
+    const gs = globalStats;
+    const dailySessions = gs?.daily_sessions ? Object.entries(gs.daily_sessions) : [];
+    const maxSessions = Math.max(...dailySessions.map(([, v]) => v as number), 1);
 
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - (6 - i));
-      const dateStr = d.toISOString().slice(0, 10);
-      const daySessions = sessions.filter((s: any) => s.date === dateStr);
-      return { date: dateStr.slice(5), questions: daySessions.reduce((sum: number, s: any) => sum + (s.questions || 0), 0) };
-    });
-    const maxQ = Math.max(...last7Days.map(d => d.questions), 1);
+    const globalSubjects: Record<string, { total: number; correct: number }> = {};
+    if (gs?.subject_stats) {
+      for (const s of gs.subject_stats) {
+        globalSubjects[s.subject] = { total: Number(s.total), correct: Number(s.correct) };
+      }
+    }
 
-    const subjectStats = {
-      algebra: progress.topicStats ? Object.keys(progress.topicStats).filter(k => ALGEBRA_QUESTIONS.some(q => q.topic === k)).reduce((s, k) => s + (progress.topicStats[k]?.total || 0), 0) : 0,
-      geometry: progress.topicStats ? Object.keys(progress.topicStats).filter(k => GEOMETRY_QUESTIONS.some(q => q.topic === k)).reduce((s, k) => s + (progress.topicStats[k]?.total || 0), 0) : 0,
-      russian: progress.topicStats ? Object.keys(progress.topicStats).filter(k => RUSSIAN_QUESTIONS.some(q => q.topic === k)).reduce((s, k) => s + (progress.topicStats[k]?.total || 0), 0) : 0,
-    };
+    const statCards = [
+      { icon: <Circle className="w-5 h-5 text-green-500" />, value: gs ? gs.online : '…', label: lang === 'ru' ? 'Онлайн сейчас' : 'Азыр онлайн', bg: 'bg-green-500/10', accent: 'text-green-500' },
+      { icon: <Users className="w-5 h-5 text-blue-500" />, value: gs ? gs.total_visitors : '…', label: lang === 'ru' ? 'Уникальных устройств' : 'Уникалдуу түзмөктөр', bg: 'bg-blue-500/10', accent: 'text-blue-500' },
+      { icon: <TrendingUp className="w-5 h-5 text-violet-500" />, value: gs ? gs.today_sessions : '…', label: lang === 'ru' ? 'Сессий сегодня' : 'Бүгүн сессия', bg: 'bg-violet-500/10', accent: 'text-violet-500' },
+      { icon: <Target className="w-5 h-5 text-orange-500" />, value: gs ? gs.today_questions : '…', label: lang === 'ru' ? 'Вопросов сегодня' : 'Бүгүн суроолор', bg: 'bg-orange-500/10', accent: 'text-orange-500' },
+      { icon: <BarChart3 className="w-5 h-5 text-emerald-500" />, value: gs ? gs.total_sessions : '…', label: lang === 'ru' ? 'Сессий всего' : 'Жалпы сессия', bg: 'bg-emerald-500/10', accent: 'text-emerald-500' },
+      { icon: <CheckCircle className="w-5 h-5 text-teal-500" />, value: gs ? gs.total_questions : '…', label: lang === 'ru' ? 'Вопросов всего' : 'Жалпы суроолор', bg: 'bg-teal-500/10', accent: 'text-teal-500' },
+    ];
+
+    const subjectRows = [
+      { id: 'algebra',  label: lang === 'ru' ? 'Алгебра' : 'Алгебра',       color: 'bg-blue-500',   data: globalSubjects['algebra'] },
+      { id: 'geometry', label: lang === 'ru' ? 'Геометрия' : 'Геометрия',   color: 'bg-violet-500', data: globalSubjects['geometry'] },
+      { id: 'russian',  label: lang === 'ru' ? 'Русский язык' : 'Орус тили',color: 'bg-teal-500',   data: globalSubjects['russian'] },
+    ];
+    const totalAnswered = subjectRows.reduce((s, r) => s + (r.data?.total || 0), 0) || 1;
 
     return (
       <div className="min-h-screen flex flex-col bg-[var(--bg-app)]">
@@ -1186,67 +1226,68 @@ export default function App() {
               {lang === 'ru' ? 'Аналитика' : 'Аналитика'}
             </h2>
             <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-widest">
-              {lang === 'ru' ? 'Только это устройство' : 'Бул түзмөк гана'}
+              {lang === 'ru' ? 'Все пользователи · Реальное время' : 'Бардык колдонуучулар · Нака убакыт'}
             </p>
           </div>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            {globalStatsLoading && (
+              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            )}
+            <button onClick={fetchGlobalStats} className="p-2 text-[var(--text-muted)] hover:text-blue-500 transition-colors">
+              <RotateCcw className="w-5 h-5" />
+            </button>
             <ShieldCheck className="w-6 h-6 text-blue-500" />
           </div>
         </header>
 
-        <main className="p-6 space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            {[
-              { icon: <Users className="w-5 h-5 text-blue-500" />, value: totalSessions, label: lang === 'ru' ? 'Сессий всего' : 'Жалпы сессия', bg: 'bg-blue-500/10' },
-              { icon: <Target className="w-5 h-5 text-emerald-500" />, value: todayQuestions, label: lang === 'ru' ? 'Сегодня вопросов' : 'Бүгүн суроолор', bg: 'bg-emerald-500/10' },
-              { icon: <TrendingUp className="w-5 h-5 text-violet-500" />, value: totalQAnswered, label: lang === 'ru' ? 'Ответов всего' : 'Жалпы жооп', bg: 'bg-violet-500/10' },
-              { icon: <BarChart3 className="w-5 h-5 text-orange-500" />, value: avgPerSession, label: lang === 'ru' ? 'Ср. за сессию' : 'Орточо сессияда', bg: 'bg-orange-500/10' },
-            ].map((item, i) => (
-              <div key={i} className="glass-card p-5 rounded-[2rem] space-y-2">
-                <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center", item.bg)}>
+        <main className="p-6 space-y-6 pb-10">
+          <div className="grid grid-cols-2 gap-3">
+            {statCards.map((item, i) => (
+              <div key={i} className="glass-card p-4 rounded-[2rem] space-y-2">
+                <div className={cn("w-9 h-9 rounded-2xl flex items-center justify-center", item.bg)}>
                   {item.icon}
                 </div>
-                <div className="text-2xl font-black text-[var(--text-main)]">{item.value}</div>
-                <div className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">{item.label}</div>
+                <div className={cn("text-2xl font-black", item.accent)}>{item.value}</div>
+                <div className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest leading-tight">{item.label}</div>
               </div>
             ))}
           </div>
 
-          <div className="glass-card p-6 rounded-[2.5rem] space-y-4">
-            <h3 className="font-black text-[var(--text-main)] text-xs uppercase tracking-widest">
-              {lang === 'ru' ? 'Активность за 7 дней' : '7 күн активдүүлүгү'}
-            </h3>
-            <div className="flex items-end gap-2 h-24">
-              {last7Days.map((d, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                  <div 
-                    className="w-full neon-gradient rounded-t-lg transition-all"
-                    style={{ height: `${Math.max((d.questions / maxQ) * 80, d.questions > 0 ? 8 : 0)}px` }}
-                  />
-                  <span className="text-[9px] font-black text-[var(--text-muted)]">{d.date}</span>
-                </div>
-              ))}
+          {dailySessions.length > 0 && (
+            <div className="glass-card p-6 rounded-[2.5rem] space-y-4">
+              <h3 className="font-black text-[var(--text-main)] text-xs uppercase tracking-widest">
+                {lang === 'ru' ? 'Сессии за 7 дней' : '7 күн сессия'}
+              </h3>
+              <div className="flex items-end gap-2 h-24">
+                {dailySessions.map(([date, count], i) => (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                    <div
+                      className="w-full neon-gradient rounded-t-lg transition-all"
+                      style={{ height: `${Math.max(((count as number) / maxSessions) * 80, (count as number) > 0 ? 8 : 0)}px` }}
+                    />
+                    <span className="text-[9px] font-black text-[var(--text-muted)]">{date.slice(5)}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="glass-card p-6 rounded-[2.5rem] space-y-4">
             <h3 className="font-black text-[var(--text-main)] text-xs uppercase tracking-widest">
-              {lang === 'ru' ? 'По предметам' : 'Предметтер боюнча'}
+              {lang === 'ru' ? 'По предметам (все пользователи)' : 'Предметтер боюнча (бардык)'}
             </h3>
-            {[
-              { id: 'algebra', label: lang === 'ru' ? 'Алгебра' : 'Алгебра', count: subjectStats.algebra, color: 'bg-blue-500' },
-              { id: 'geometry', label: lang === 'ru' ? 'Геометрия' : 'Геометрия', count: subjectStats.geometry, color: 'bg-violet-500' },
-              { id: 'russian', label: lang === 'ru' ? 'Русский язык' : 'Орус тили', count: subjectStats.russian, color: 'bg-teal-500' },
-            ].map((s) => {
-              const total = subjectStats.algebra + subjectStats.geometry + subjectStats.russian || 1;
+            {subjectRows.map((s) => {
+              const total = s.data?.total || 0;
+              const correct = s.data?.correct || 0;
+              const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
               return (
                 <div key={s.id} className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-sm font-bold text-[var(--text-main)]">{s.label}</span>
-                    <span className="text-sm font-black text-[var(--text-muted)]">{s.count}</span>
+                    <span className="text-sm font-black text-[var(--text-muted)]">{total} {lang === 'ru' ? 'отв.' : 'жооп'} · {pct}% ✓</span>
                   </div>
                   <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <div className={cn("h-full rounded-full", s.color)} style={{ width: `${(s.count / total) * 100}%` }} />
+                    <div className={cn("h-full rounded-full", s.color)} style={{ width: `${(total / totalAnswered) * 100}%` }} />
                   </div>
                 </div>
               );
@@ -1255,7 +1296,7 @@ export default function App() {
 
           <div className="glass-card p-6 rounded-[2.5rem] space-y-3">
             <h3 className="font-black text-[var(--text-main)] text-xs uppercase tracking-widest">
-              {lang === 'ru' ? 'Прогресс пользователя' : 'Колдонуучунун илгерилеши'}
+              {lang === 'ru' ? 'Мой прогресс' : 'Менин илгерилешим'}
             </h3>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
@@ -1272,17 +1313,6 @@ export default function App() {
               </div>
             </div>
           </div>
-
-          <button
-            onClick={() => {
-              if (confirm(lang === 'ru' ? 'Сбросить данные аналитики?' : 'Аналитика маалыматтарын тазалоо?')) {
-                saveAnalytics({ sessions: [], sessionCount: 0 });
-              }
-            }}
-            className="w-full py-4 rounded-[1.5rem] border-2 border-red-200 dark:border-red-900/50 text-red-500 font-black"
-          >
-            {lang === 'ru' ? 'Сбросить аналитику' : 'Аналитиканы тазалоо'}
-          </button>
         </main>
       </div>
     );
