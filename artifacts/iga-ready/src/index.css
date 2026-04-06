@@ -6,45 +6,43 @@
 }
 
 :root {
-  --bg-app: #ffffff;
-  --text-main: #1a1a1a;
-  --text-muted: #4a4a4a;
+  --bg-app: #f0f4ff;
+  --text-main: #0d1b2a;
+  --text-muted: #64748b;
   --card-bg: #ffffff;
   --card-border: #e2e8f0;
-  --accent-primary: #2563eb;
-  --accent-secondary: #7c3aed;
-  
-  --correct-text: #1a5c2a;
-  --correct-bg: #d4edda;
-  --wrong-text: #7b1d1d;
-  --wrong-bg: #f8d7da;
+
+  --correct-text: #065f46;
+  --correct-bg: #d1fae5;
+  --wrong-text: #7f1d1d;
+  --wrong-bg: #fee2e2;
   --neutral-text: #1a1a1a;
   --neutral-bg: #f0f0f0;
-  --selected-text: #003580;
-  --selected-bg: #dce8ff;
-  --timer-text: #7b1d1d;
-  --timer-bg: #fff3cd;
-  --input-text: #1a1a1a;
+  --selected-text: #1e40af;
+  --selected-bg: #dbeafe;
+  --timer-text: #7f1d1d;
+  --timer-bg: #fef3c7;
+  --input-text: #0d1b2a;
   --input-bg: #ffffff;
 }
 
 .dark {
-  --bg-app: #121212;
-  --text-main: #f0f0f0;
-  --text-muted: #b0b0b0;
-  --card-bg: #1e1e1e;
+  --bg-app: #0f172a;
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+  --card-bg: #1e293b;
   --card-border: #334155;
-  
-  --correct-text: #a8d5b5;
-  --correct-bg: #1a3d25;
-  --wrong-text: #f5a8a8;
-  --wrong-bg: #3d1a1a;
-  --selected-text: #a8c8ff;
-  --selected-bg: #1a2d4a;
-  --input-text: #f0f0f0;
-  --input-bg: #2a2a2a;
-  --timer-text: #f5a8a8;
-  --timer-bg: #3d1a1a;
+
+  --correct-text: #6ee7b7;
+  --correct-bg: #064e3b;
+  --wrong-text: #fca5a5;
+  --wrong-bg: #450a0a;
+  --selected-text: #93c5fd;
+  --selected-bg: #1e3a5f;
+  --input-text: #f1f5f9;
+  --input-bg: #1e293b;
+  --timer-text: #fca5a5;
+  --timer-bg: #450a0a;
 }
 
 @layer base {
@@ -55,25 +53,46 @@
 
 @layer components {
   .glass-card {
-    @apply bg-[var(--card-bg)] border border-[var(--card-border)] shadow-sm backdrop-blur-md;
+    @apply bg-[var(--card-bg)] border border-[var(--card-border)] shadow-sm;
   }
-  
+
+  .card-shadow {
+    box-shadow: 0 4px 24px rgba(67, 97, 238, 0.08), 0 1px 4px rgba(0,0,0,0.04);
+  }
+
+  .card-shadow-lg {
+    box-shadow: 0 8px 40px rgba(67, 97, 238, 0.18), 0 2px 8px rgba(0,0,0,0.06);
+  }
+
   .neon-gradient {
-    background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+    background: linear-gradient(135deg, #4361ee 0%, #7209b7 100%);
   }
-  
+
   .neon-glow {
-    box-shadow: 0 0 20px rgba(37, 99, 235, 0.3);
+    box-shadow: 0 8px 32px rgba(67, 97, 238, 0.4), 0 2px 8px rgba(114, 9, 183, 0.2);
+  }
+
+  .hero-gradient {
+    background: linear-gradient(135deg, #4361ee 0%, #7209b7 60%, #f72585 100%);
   }
 }
 
 @keyframes pulse-soft {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.8; transform: scale(1.05); }
+  50% { opacity: 0.85; transform: scale(1.08); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
 }
 
 .animate-pulse-soft {
   animation: pulse-soft 3s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
 }
 
 @import "katex/dist/katex.min.css";

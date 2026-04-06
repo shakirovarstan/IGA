@@ -31,11 +31,11 @@ import {
 type AppState = 'landing' | 'exam' | 'results' | 'drill_selector' | 'mistake_review' | 'topic_list' | 'learn_topic';
 type Language = 'ru' | 'ky';
 
-const SUBJECTS: { id: Subject; title: { ru: string; ky: string }; icon: any; color: string }[] = [
-  { id: 'algebra', title: { ru: 'Алгебра', ky: 'Алгебра' }, icon: Layout, color: 'bg-blue-600' },
-  { id: 'geometry', title: { ru: 'Геометрия', ky: 'Геометрия' }, icon: BookOpen, color: 'bg-indigo-600' },
-  { id: 'russian', title: { ru: 'Русский язык', ky: 'Орус тили' }, icon: GraduationCap, color: 'bg-purple-600' },
-  { id: 'history', title: { ru: 'История Кыргызстана', ky: 'Кыргызстан тарыхы' }, icon: Trophy, color: 'bg-amber-600' },
+const SUBJECTS: { id: Subject; title: { ru: string; ky: string }; icon: any; color: string; gradient: string; emoji: string }[] = [
+  { id: 'algebra', title: { ru: 'Алгебра', ky: 'Алгебра' }, icon: Layout, color: 'bg-blue-600', gradient: 'linear-gradient(135deg, #4361ee, #4cc9f0)', emoji: '📐' },
+  { id: 'geometry', title: { ru: 'Геометрия', ky: 'Геометрия' }, icon: BookOpen, color: 'bg-violet-600', gradient: 'linear-gradient(135deg, #7209b7, #f72585)', emoji: '📏' },
+  { id: 'russian', title: { ru: 'Русский язык', ky: 'Орус тили' }, icon: GraduationCap, color: 'bg-teal-600', gradient: 'linear-gradient(135deg, #06b6d4, #059669)', emoji: '📖' },
+  { id: 'history', title: { ru: 'История Кыргызстана', ky: 'Кыргызстан тарыхы' }, icon: Trophy, color: 'bg-amber-600', gradient: 'linear-gradient(135deg, #f77f00, #e63946)', emoji: '🏔️' },
 ];
 
 export default function App() {
@@ -198,191 +198,228 @@ export default function App() {
     }
   };
 
-  const renderLanding = () => (
-    <div className="p-6 space-y-8 bg-[var(--bg-app)] min-h-screen">
-      <header className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="neon-gradient p-3 rounded-2xl shadow-lg shadow-blue-500/20">
-            <GraduationCap className="w-8 h-8 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black tracking-tight text-[var(--text-main)]">IGA-Ready</h1>
-            <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
-              {lang === 'ru' ? 'Подготовка к ИГА' : 'ЖМАТка даярдык'}
-            </p>
-          </div>
-        </div>
-        <button 
-          onClick={() => setDarkMode(!darkMode)}
-          className="p-3 rounded-2xl bg-[var(--card-bg)] border border-[var(--card-border)] shadow-sm text-[var(--text-main)]"
-        >
-          {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-        </button>
-      </header>
+  const renderLanding = () => {
+    const subj = SUBJECTS.find(s => s.id === currentSubject)!;
+    const studiedCount = progress.studiedTopics.filter(id => TOPICS.find(t => t.id === id)?.subject === currentSubject).length;
+    const totalTopics = TOPICS.filter(t => t.subject === currentSubject).length;
+    const progressPct = totalTopics > 0 ? Math.round((studiedCount / totalTopics) * 100) : 0;
 
-      <div className="flex bg-slate-200/50 dark:bg-slate-800/50 p-1 rounded-2xl backdrop-blur-sm">
-        <button 
-          onClick={() => setLang('ru')}
-          className={cn("flex-1 py-2.5 text-sm font-bold rounded-xl transition-all", lang === 'ru' ? "bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-[var(--text-muted)]")}
-        >
-          Русский
-        </button>
-        <button 
-          onClick={() => setLang('ky')}
-          className={cn("flex-1 py-2.5 text-sm font-bold rounded-xl transition-all", lang === 'ky' ? "bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-[var(--text-muted)]")}
-        >
-          Кыргызча
-        </button>
-      </div>
+    return (
+      <div className="min-h-screen bg-[var(--bg-app)] flex flex-col">
+        {/* Hero header */}
+        <div className="hero-gradient px-5 pt-12 pb-8 relative overflow-hidden">
+          {/* decorative blobs */}
+          <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10 blur-2xl" />
+          <div className="absolute bottom-0 left-5 w-24 h-24 rounded-full bg-white/10 blur-xl" />
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="glass-card p-5 rounded-[2rem] flex flex-col items-center space-y-1 relative overflow-hidden group">
-          <div className="absolute inset-0 bg-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="relative">
-            <Flame className="w-8 h-8 text-orange-500 animate-pulse-soft" />
-            <div className="absolute inset-0 blur-lg bg-orange-500/30 animate-pulse-soft" />
+          <div className="flex items-start justify-between mb-6 relative z-10">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="bg-white/20 p-1.5 rounded-lg">
+                  <GraduationCap className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-white/80 text-xs font-black uppercase tracking-widest">IGA-Ready</span>
+              </div>
+              <h1 className="text-white font-black text-2xl leading-tight">
+                {lang === 'ru' ? 'Подготовка к ИГА' : 'ЖМАТка даярдык'}
+              </h1>
+              <p className="text-white/60 text-xs mt-1 font-medium">
+                {lang === 'ru' ? 'Кыргызстан, 9 класс' : 'Кыргызстан, 9-класс'}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <div className="flex bg-white/15 p-0.5 rounded-xl overflow-hidden">
+                <button onClick={() => setLang('ru')} className={cn("px-3 py-1.5 text-xs font-black rounded-lg transition-all", lang === 'ru' ? "bg-white text-blue-700" : "text-white/80")}>RU</button>
+                <button onClick={() => setLang('ky')} className={cn("px-3 py-1.5 text-xs font-black rounded-lg transition-all", lang === 'ky' ? "bg-white text-blue-700" : "text-white/80")}>KY</button>
+              </div>
+              <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-xl bg-white/15 text-white">
+                {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
-          <span className="text-3xl font-black text-[var(--text-main)]">{progress.streak}</span>
-          <span className="text-[10px] text-[var(--text-muted)] uppercase font-black tracking-widest">
-            {lang === 'ru' ? 'Дней подряд' : 'Күн катары менен'}
-          </span>
-        </div>
-        <div className="glass-card p-5 rounded-[2rem] flex flex-col items-center space-y-1 relative overflow-hidden group">
-          <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-          <Trophy className="w-8 h-8 text-yellow-500" />
-          <span className="text-3xl font-black text-[var(--text-main)]">{progress.totalQuestions}</span>
-          <span className="text-[10px] text-[var(--text-muted)] uppercase font-black tracking-widest">
-            {lang === 'ru' ? 'Решено' : 'Чечилди'}
-          </span>
-        </div>
-      </div>
 
-      <div className="space-y-4">
-        <h2 className="text-xs font-black text-[var(--text-muted)] uppercase tracking-[0.2em] px-1">
-          {lang === 'ru' ? 'Предметы' : 'Предметтер'}
-        </h2>
-        <div className="grid grid-cols-2 gap-4">
-          {SUBJECTS.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => setCurrentSubject(s.id)}
-              className={cn(
-                "p-5 rounded-[2rem] border-2 transition-all text-left space-y-3 relative overflow-hidden group",
-                currentSubject === s.id 
-                  ? "border-blue-500 bg-blue-50/50 dark:bg-blue-500/10 shadow-lg shadow-blue-500/10" 
-                  : "border-transparent glass-card hover:border-blue-300/50 hover:-translate-y-1"
-              )}
-            >
-              <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-110", s.color)}>
-                <s.icon className="w-6 h-6 text-white" />
+          {/* Stats row */}
+          <div className="flex gap-3 relative z-10">
+            <div className="flex-1 bg-white/15 backdrop-blur-sm rounded-2xl p-3 flex items-center gap-3">
+              <div className="bg-orange-400/30 p-2 rounded-xl">
+                <Flame className="w-5 h-5 text-orange-200 animate-pulse-soft" />
               </div>
               <div>
-                <div className="font-black text-sm leading-tight text-[var(--text-main)]">{s.title[lang]}</div>
-                <div className="text-[10px] font-bold text-[var(--text-muted)] mt-1">
-                  {progress.studiedTopics.filter(id => TOPICS.find(t => t.id === id)?.subject === s.id).length} / {TOPICS.filter(t => t.subject === s.id).length}
-                </div>
+                <div className="text-white font-black text-xl leading-none">{progress.streak}</div>
+                <div className="text-white/60 text-[10px] font-bold uppercase tracking-wide">{lang === 'ru' ? 'Дней подряд' : 'Күн катары'}</div>
               </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="space-y-4 pt-2">
-        <button 
-          onClick={() => startExam('exam')}
-          className="w-full neon-gradient text-white p-6 rounded-[2rem] flex items-center justify-between group transition-all shadow-2xl shadow-blue-500/30 neon-glow active:scale-95"
-        >
-          <div className="flex items-center space-x-5 text-left">
-            <div className="bg-white/20 backdrop-blur-md p-4 rounded-2xl">
-              <Rocket className="w-8 h-8 text-white" />
             </div>
-            <div>
-              <div className="font-black text-2xl tracking-tight">{lang === 'ru' ? 'Полный экзамен' : 'Толук сынак'}</div>
-              <div className="text-white/70 text-xs font-bold uppercase tracking-widest">{lang === 'ru' ? '20 вопросов • 40 минут' : '20 суроо • 40 мүнөт'}</div>
+            <div className="flex-1 bg-white/15 backdrop-blur-sm rounded-2xl p-3 flex items-center gap-3">
+              <div className="bg-yellow-400/30 p-2 rounded-xl">
+                <Trophy className="w-5 h-5 text-yellow-200" />
+              </div>
+              <div>
+                <div className="text-white font-black text-xl leading-none">{progress.totalQuestions}</div>
+                <div className="text-white/60 text-[10px] font-bold uppercase tracking-wide">{lang === 'ru' ? 'Решено' : 'Чечилди'}</div>
+              </div>
             </div>
           </div>
-          <ChevronRight className="w-8 h-8 group-hover:translate-x-2 transition-transform" />
-        </button>
+        </div>
 
-        <div className="grid grid-cols-1 gap-4">
-          <button 
-            onClick={() => setState('drill_selector')}
-            className="glass-card p-5 rounded-[2rem] flex items-center space-x-5 hover:border-blue-400/50 transition-all group"
-          >
-            <div className="bg-blue-100 dark:bg-blue-900/30 p-4 rounded-2xl group-hover:scale-110 transition-transform">
-              <BarChart3 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+        <div className="flex-1 px-5 py-6 space-y-6">
+          {/* Subject selector */}
+          <div className="space-y-3">
+            <h2 className="text-[11px] font-black text-[var(--text-muted)] uppercase tracking-[0.18em]">
+              {lang === 'ru' ? 'Предмет' : 'Предмет'}
+            </h2>
+            <div className="grid grid-cols-2 gap-3">
+              {SUBJECTS.map((s) => {
+                const sStudied = progress.studiedTopics.filter(id => TOPICS.find(t => t.id === id)?.subject === s.id).length;
+                const sTotal = TOPICS.filter(t => t.subject === s.id).length;
+                const sActive = currentSubject === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => setCurrentSubject(s.id)}
+                    className={cn(
+                      "relative rounded-[1.5rem] p-4 text-left transition-all overflow-hidden",
+                      sActive ? "ring-[3px] ring-offset-2 ring-offset-[var(--bg-app)]" : "opacity-75 hover:opacity-90 active:scale-95"
+                    )}
+                    style={{
+                      background: s.gradient,
+                      ringColor: s.id === 'algebra' ? '#4361ee' : s.id === 'geometry' ? '#7209b7' : s.id === 'russian' ? '#06b6d4' : '#f77f00'
+                    }}
+                  >
+                    <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full bg-white/10" />
+                    <div className="text-2xl mb-2">{s.emoji}</div>
+                    <div className="text-white font-black text-sm leading-tight">{s.title[lang]}</div>
+                    <div className="flex items-center gap-1.5 mt-2">
+                      <div className="flex-1 h-1.5 bg-white/25 rounded-full overflow-hidden">
+                        <div className="h-full bg-white/80 rounded-full" style={{ width: `${sTotal > 0 ? Math.round(sStudied / sTotal * 100) : 0}%` }} />
+                      </div>
+                      <span className="text-white/70 text-[10px] font-black">{sStudied}/{sTotal}</span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-            <div className="text-left">
-              <div className="font-black text-[var(--text-main)]">{lang === 'ru' ? 'Тренировка по темам' : 'Темалар боюнча машыгуу'}</div>
-              <div className="text-xs text-[var(--text-muted)] font-bold">{lang === 'ru' ? 'Отработка слабых мест' : 'Алсыз жактарды бекемдөө'}</div>
-            </div>
-          </button>
+          </div>
 
-          <button 
-            onClick={() => startExam('mistake_review')}
-            className="glass-card p-5 rounded-[2rem] flex items-center space-x-5 hover:border-red-400/50 transition-all group"
-          >
-            <div className="bg-red-100 dark:bg-red-900/30 p-4 rounded-2xl group-hover:scale-110 transition-transform">
-              <RotateCcw className="w-6 h-6 text-red-500 dark:text-red-400" />
+          {/* Active subject info */}
+          <div className="glass-card rounded-[1.5rem] p-4 card-shadow flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0" style={{ background: subj.gradient }}>
+              {subj.emoji}
             </div>
-            <div className="text-left">
-              <div className="font-black text-[var(--text-main)]">{lang === 'ru' ? 'Работа над ошибками' : 'Каталар менен иштөө'}</div>
-              <div className="text-xs text-[var(--text-muted)] font-bold">{progress.mistakes.length} {lang === 'ru' ? 'вопросов' : 'суроо'}</div>
-            </div>
-          </button>
-
-          <button 
-            onClick={() => setState('topic_list')}
-            className="glass-card p-5 rounded-[2rem] flex items-center space-x-5 hover:border-green-400/50 transition-all group"
-          >
-            <div className="bg-green-100 dark:bg-green-900/30 p-4 rounded-2xl group-hover:scale-110 transition-transform">
-              <GraduationCap className="w-6 h-6 text-green-500 dark:text-green-400" />
-            </div>
-            <div className="text-left">
-              <div className="font-black text-[var(--text-main)]">{lang === 'ru' ? 'Учебник: Темы' : 'Окуу куралы: Темалар'}</div>
-              <div className="text-xs text-[var(--text-muted)] font-bold">
-                {progress.studiedTopics.filter(id => TOPICS.find(t => t.id === id)?.subject === currentSubject).length} / {TOPICS.filter(t => t.subject === currentSubject).length} {lang === 'ru' ? 'изучено' : 'изилденди'}
+            <div className="flex-1 min-w-0">
+              <div className="font-black text-[var(--text-main)] text-sm">{subj.title[lang]}</div>
+              <div className="flex items-center gap-2 mt-1.5">
+                <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${progressPct}%`, background: subj.gradient }} />
+                </div>
+                <span className="text-[10px] font-black text-[var(--text-muted)]">{progressPct}%</span>
               </div>
             </div>
+          </div>
+
+          {/* Main action — Full Exam */}
+          <button 
+            onClick={() => startExam('exam')}
+            className="w-full neon-gradient text-white px-6 py-5 rounded-[1.5rem] flex items-center justify-between group transition-all neon-glow active:scale-95"
+          >
+            <div className="flex items-center gap-4">
+              <div className="bg-white/20 p-3 rounded-2xl">
+                <Rocket className="w-6 h-6 text-white" />
+              </div>
+              <div className="text-left">
+                <div className="font-black text-lg leading-none">{lang === 'ru' ? 'Полный экзамен' : 'Толук сынак'}</div>
+                <div className="text-white/70 text-[11px] font-bold mt-1 uppercase tracking-wider">{lang === 'ru' ? '20 вопросов • 40 минут' : '20 суроо • 40 мүнөт'}</div>
+              </div>
+            </div>
+            <ChevronRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
           </button>
+
+          {/* Secondary actions */}
+          <div className="grid grid-cols-1 gap-3">
+            <button 
+              onClick={() => setState('drill_selector')}
+              className="glass-card card-shadow rounded-[1.5rem] p-4 flex items-center gap-4 active:scale-95 transition-all hover:-translate-y-0.5"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                <BarChart3 className="w-6 h-6 text-blue-500" />
+              </div>
+              <div className="text-left flex-1">
+                <div className="font-black text-[var(--text-main)] text-sm">{lang === 'ru' ? 'Тренировка по темам' : 'Темалар боюнча машыгуу'}</div>
+                <div className="text-[11px] text-[var(--text-muted)] font-semibold mt-0.5">{lang === 'ru' ? 'Отработай слабые места' : 'Алсыз жактарды бекемдө'}</div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-[var(--text-muted)]" />
+            </button>
+
+            <button 
+              onClick={() => startExam('mistake_review')}
+              className="glass-card card-shadow rounded-[1.5rem] p-4 flex items-center gap-4 active:scale-95 transition-all hover:-translate-y-0.5"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-red-500/10 flex items-center justify-center flex-shrink-0">
+                <RotateCcw className="w-6 h-6 text-red-500" />
+              </div>
+              <div className="text-left flex-1">
+                <div className="font-black text-[var(--text-main)] text-sm">{lang === 'ru' ? 'Работа над ошибками' : 'Каталар менен иштөө'}</div>
+                <div className="text-[11px] text-[var(--text-muted)] font-semibold mt-0.5">
+                  {progress.mistakes.length} {lang === 'ru' ? 'вопросов требуют повтора' : 'суроо кайталоону керек'}
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-[var(--text-muted)]" />
+            </button>
+
+            <button 
+              onClick={() => setState('topic_list')}
+              className="glass-card card-shadow rounded-[1.5rem] p-4 flex items-center gap-4 active:scale-95 transition-all hover:-translate-y-0.5"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                <BookOpen className="w-6 h-6 text-emerald-500" />
+              </div>
+              <div className="text-left flex-1">
+                <div className="font-black text-[var(--text-main)] text-sm">{lang === 'ru' ? 'Учебник по темам' : 'Окуу куралы'}</div>
+                <div className="text-[11px] text-[var(--text-muted)] font-semibold mt-0.5">
+                  {studiedCount}/{totalTopics} {lang === 'ru' ? 'тем изучено' : 'тема изилденди'}
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-[var(--text-muted)]" />
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderExam = () => {
     const question = currentQuestions[currentIndex];
     const userChoice = answers[question.id];
-    
+    const subj = SUBJECTS.find(s => s.id === currentSubject)!;
+
     return (
       <div className="min-h-screen flex flex-col bg-[var(--bg-app)]">
-        <header className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-[var(--bg-app)]/80 backdrop-blur-md z-10">
-          <button onClick={() => setState('landing')} className="p-2 -ml-2 text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors">
-            <ArrowLeft className="w-7 h-7" />
+        <header className="px-4 py-3 border-b border-[var(--card-border)] flex items-center justify-between sticky top-0 bg-[var(--bg-app)]/90 backdrop-blur-md z-10">
+          <button onClick={() => setState('landing')} className="p-2 -ml-1 text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors">
+            <ArrowLeft className="w-6 h-6" />
           </button>
           
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center gap-1">
             <span className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">
-              {lang === 'ru' ? 'Вопрос' : 'Суроо'} {currentIndex + 1} / {currentQuestions.length}
+              {currentIndex + 1} / {currentQuestions.length}
             </span>
-            <div className="w-32 h-2 bg-slate-100 dark:bg-slate-800 rounded-full mt-1.5 overflow-hidden">
+            <div className="w-36 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
               <div 
-                className="h-full neon-gradient transition-all duration-500 ease-out" 
-                style={{ width: `${((currentIndex + 1) / currentQuestions.length) * 100}%` }}
+                className="h-full rounded-full transition-all duration-500 ease-out" 
+                style={{ width: `${((currentIndex + 1) / currentQuestions.length) * 100}%`, background: subj.gradient }}
               />
             </div>
           </div>
 
           {isTimerActive ? (
             <div className={cn(
-              "font-mono font-black px-4 py-1.5 rounded-xl text-sm", 
+              "font-mono font-black px-3 py-1.5 rounded-xl text-sm", 
               timeLeft < 300 
-                ? "bg-red-100 text-red-600 animate-pulse" 
-                : "bg-[var(--timer-bg)] text-[var(--timer-text)]"
+                ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 animate-pulse" 
+                : "bg-slate-100 dark:bg-slate-800 text-[var(--text-main)]"
             )}>
               {formatTime(timeLeft)}
             </div>
-          ) : <div className="w-12" />}
+          ) : <div className="w-14" />}
         </header>
 
         <main className="flex-1 p-6 space-y-8 overflow-y-auto">
@@ -461,7 +498,8 @@ export default function App() {
               {!showSolution && (
                 <button 
                   onClick={handleShortSubmit}
-                  className="w-full neon-gradient text-white py-5 rounded-[2rem] font-black shadow-xl shadow-blue-500/20 active:scale-95 transition-transform"
+                  className="w-full text-white py-5 rounded-[1.5rem] font-black shadow-lg active:scale-95 transition-transform"
+                  style={{ background: subj.gradient }}
                 >
                   {lang === 'ru' ? 'Ответить' : 'Жооп берүү'}
                 </button>
@@ -587,23 +625,24 @@ export default function App() {
           </AnimatePresence>
         </main>
 
-        <footer className="p-6 border-t border-slate-100 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky bottom-0">
+        <footer className="px-5 py-4 border-t border-[var(--card-border)] bg-[var(--bg-app)]/90 backdrop-blur-md sticky bottom-0">
           {!showSolution ? (
             <button 
               onClick={skipQuestion}
-              className="w-full py-4 text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest hover:text-slate-900 dark:hover:text-white transition-colors text-xs"
+              className="w-full py-3.5 text-[var(--text-muted)] font-black uppercase tracking-widest text-xs hover:text-[var(--text-main)] transition-colors"
             >
-              {lang === 'ru' ? 'Пропустить' : 'Өткөрүп жиберүү'}
+              {lang === 'ru' ? 'Пропустить →' : 'Өткөрүп жиберүү →'}
             </button>
           ) : (
             <button 
               onClick={nextQuestion}
-              className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-6 rounded-[2rem] font-black shadow-2xl shadow-slate-200 dark:shadow-none flex items-center justify-center transition-transform active:scale-95"
+              className="w-full text-white py-5 rounded-[1.5rem] font-black flex items-center justify-center transition-all active:scale-95 shadow-lg"
+              style={{ background: subj.gradient }}
             >
               {currentIndex === currentQuestions.length - 1 
                 ? (lang === 'ru' ? 'Завершить' : 'Аяктоо') 
                 : (lang === 'ru' ? 'Далее' : 'Кийинки')}
-              <ChevronRight className="w-6 h-6 ml-3" />
+              <ChevronRight className="w-5 h-5 ml-2" />
             </button>
           )}
         </footer>
