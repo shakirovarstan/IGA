@@ -7,6 +7,21 @@ const router: IRouter = Router();
 const ADMIN_SECRET = process.env.ADMIN_SECRET ?? "iga2025";
 const ONLINE_TIMEOUT_MINUTES = 5;
 
+router.post("/analytics/heartbeat", async (req, res) => {
+  const { visitor_id, session_id } = req.body;
+  if (!visitor_id || !session_id) { res.status(400).json({ error: "Missing ids" }); return; }
+  try {
+    await db
+      .insert(analyticsOnlineTable)
+      .values({ visitor_id, session_id, last_seen: new Date(), page: 'active' })
+      .onConflictDoUpdate({
+        target: analyticsOnlineTable.visitor_id,
+        set: { last_seen: new Date(), session_id },
+      });
+    res.json({ ok: true });
+  } catch { res.status(500).json({ error: "Internal server error" }); }
+});
+
 router.post("/analytics/event", async (req, res) => {
   try {
     const parsed = insertAnalyticsEventSchema.safeParse(req.body);

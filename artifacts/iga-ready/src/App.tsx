@@ -81,6 +81,7 @@ export default function App() {
   const [adminUnlocked, setAdminUnlocked] = useState(() => localStorage.getItem('iga_admin') === '1');
   const logoClickCount   = useRef(0);
   const logoClickTimer   = useRef<any>(null);
+  const pageViewFired    = useRef(false);
   const [adminPassword, setAdminPassword] = useState('');
   const [showAdminPrompt, setShowAdminPrompt] = useState(false);
   const [visitorId] = useState<string>(() => {
@@ -115,8 +116,10 @@ export default function App() {
     setGlobalStatsLoading(false);
   };
 
-  // Track session analytics
+  // Track session analytics — guard prevents React StrictMode double-fire
   useEffect(() => {
+    if (pageViewFired.current) return;
+    pageViewFired.current = true;
     const data = getAnalytics();
     data.sessionCount = (data.sessionCount || 0) + 1;
     const today = new Date().toISOString().slice(0, 10);
@@ -131,6 +134,27 @@ export default function App() {
 
   useEffect(() => {
     if (state === 'admin') fetchGlobalStats();
+  }, [state]);
+
+  // Heartbeat every 60 s — keeps "online now" accurate
+  useEffect(() => {
+    const sendHeartbeat = () => {
+      fetch('/api/analytics/heartbeat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visitor_id: visitorId, session_id: sessionId }),
+      }).catch(() => {});
+    };
+    sendHeartbeat();
+    const id = setInterval(sendHeartbeat, 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Auto-refresh admin stats every 30 s while panel is open
+  useEffect(() => {
+    if (state !== 'admin') return;
+    const id = setInterval(fetchGlobalStats, 30_000);
+    return () => clearInterval(id);
   }, [state]);
 
   useEffect(() => {
