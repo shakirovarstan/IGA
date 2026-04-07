@@ -23,7 +23,7 @@ import {
   GraduationCap,
   Sun,
   Moon,
-  Rocket,
+  Globe,
   Circle,
   CheckCircle,
   ShieldCheck,
@@ -40,7 +40,7 @@ const SUBJECTS: { id: Subject; title: { ru: string; ky: string }; icon: any; col
   { id: 'algebra',  title: { ru: 'Алгебра',        ky: 'Алгебра'       }, icon: Layout,       color: 'bg-blue-600',   gradient: 'linear-gradient(135deg, #4361ee, #4cc9f0)', emoji: '📐' },
   { id: 'geometry', title: { ru: 'Геометрия',      ky: 'Геометрия'     }, icon: BookOpen,     color: 'bg-violet-600', gradient: 'linear-gradient(135deg, #7209b7, #f72585)', emoji: '📏' },
   { id: 'russian',  title: { ru: 'Русский язык',   ky: 'Орус тили'     }, icon: GraduationCap,color: 'bg-teal-600',   gradient: 'linear-gradient(135deg, #06b6d4, #059669)', emoji: '📖' },
-  { id: 'kyrgyz',   title: { ru: 'Кыргызский язык',ky: 'Кыргыз тили'  }, icon: Rocket,       color: 'bg-green-600',  gradient: 'linear-gradient(135deg, #16a34a, #86efac)', emoji: '🇰🇬' },
+  { id: 'kyrgyz',   title: { ru: 'Кыргызский язык',ky: 'Кыргыз тили'  }, icon: Globe,        color: 'bg-green-600',  gradient: 'linear-gradient(135deg, #16a34a, #86efac)', emoji: '🌐' },
 ];
 
 interface SavedExamState {
@@ -78,6 +78,7 @@ export default function App() {
   const [shortAnswer, setShortAnswer]     = useState('');
   const [savedExamState, setSavedExamState] = useState<SavedExamState | null>(null);
   const [topicCameFrom, setTopicCameFrom] = useState<AppState>('topic_list');
+  const [examDisplayLang, setExamDisplayLang] = useState<Language>('ru');
 
   // Admin panel
   const [adminUnlocked, setAdminUnlocked] = useState(() => localStorage.getItem('iga_admin') === '1');
@@ -237,6 +238,7 @@ export default function App() {
     setState('exam');
     setHintIndex(0);
     setSavedExamState(null);
+    setExamDisplayLang(currentSubject === 'kyrgyz' ? 'ky' : lang);
 
     if (mode === 'exam') {
       const time = (currentSubject === 'russian' || currentSubject === 'kyrgyz') ? 3600 : 2400;
@@ -459,7 +461,11 @@ export default function App() {
                     style={{ background: s.gradient }}
                   >
                     <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full bg-white/10" />
-                    <div className="text-2xl mb-1">{s.emoji}</div>
+                    <div className="mb-1">
+                      {s.id === 'kyrgyz'
+                        ? <Globe className="w-6 h-6 text-white" />
+                        : <span className="text-2xl">{s.emoji}</span>}
+                    </div>
                     <div className="text-white font-black text-xs leading-tight">{s.title[lang]}</div>
                     <div className="flex items-center gap-1 mt-1.5">
                       <div className="flex-1 h-1 bg-white/25 rounded-full overflow-hidden">
@@ -474,8 +480,10 @@ export default function App() {
           </div>
 
           <div className="glass-card rounded-[1.5rem] p-4 card-shadow flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0" style={{ background: subj.gradient }}>
-              {subj.emoji}
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: subj.gradient }}>
+              {subj.id === 'kyrgyz'
+                ? <Globe className="w-6 h-6 text-white" />
+                : <span className="text-2xl">{subj.emoji}</span>}
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-black text-[var(--text-main)] text-sm">{subj.title[lang]}</div>
@@ -494,7 +502,7 @@ export default function App() {
           >
             <div className="flex items-center gap-4">
               <div className="bg-white/20 p-3 rounded-2xl">
-                <Rocket className="w-6 h-6 text-white" />
+                <Target className="w-6 h-6 text-white" />
               </div>
               <div className="text-left">
                 <div className="font-black text-lg leading-none">{lang === 'ru' ? 'Полный экзамен' : 'Толук сынак'}</div>
@@ -584,21 +592,36 @@ export default function App() {
             </div>
           </div>
 
-          {isTimerActive ? (
-            <div className={cn(
-              "font-mono font-black px-3 py-1.5 rounded-xl text-sm border", 
-              timeLeft < 300 
-                ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 animate-pulse" 
-                : "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border-slate-300 dark:border-slate-700"
-            )}>
-              {formatTime(timeLeft)}
-            </div>
-          ) : <div className="w-14" />}
+          <div className="flex items-center gap-2">
+            {currentSubject === 'kyrgyz' && (
+              <button
+                onClick={() => setExamDisplayLang(examDisplayLang === 'ky' ? 'ru' : 'ky')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black border-2 transition-all"
+                style={examDisplayLang === 'ky'
+                  ? { background: 'linear-gradient(135deg,#16a34a,#86efac)', color: 'white', borderColor: 'transparent' }
+                  : { backgroundColor: 'var(--card-bg)', borderColor: '#16a34a', color: '#16a34a' }
+                }
+              >
+                <Globe className="w-3.5 h-3.5" />
+                {examDisplayLang === 'ky' ? 'RU' : 'KY'}
+              </button>
+            )}
+            {isTimerActive ? (
+              <div className={cn(
+                "font-mono font-black px-3 py-1.5 rounded-xl text-sm border", 
+                timeLeft < 300 
+                  ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 animate-pulse" 
+                  : "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border-slate-300 dark:border-slate-700"
+              )}>
+                {formatTime(timeLeft)}
+              </div>
+            ) : <div className="w-14" />}
+          </div>
         </header>
 
         <main className="flex-1 p-6 space-y-8 overflow-y-auto">
           <div className="text-xl font-bold text-[var(--text-main)] leading-relaxed">
-            <MathText text={question.text[lang]} />
+            <MathText text={question.text[examDisplayLang]} />
           </div>
 
           {question.graph && (
@@ -648,7 +671,7 @@ export default function App() {
                         "font-bold text-lg flex-1",
                         showSolution && isSelected && !isCorrect && "line-through opacity-60"
                       )}>
-                        <MathText text={typeof opt.text === 'string' ? opt.text : opt.text[lang]} />
+                        <MathText text={typeof opt.text === 'string' ? opt.text : opt.text[examDisplayLang]} />
                       </div>
                     </div>
                     {showSolution && isCorrect && <CheckCircle2 className="w-6 h-6 shrink-0 ml-2" />}
@@ -707,7 +730,7 @@ export default function App() {
                     <span className="bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black mr-4 mt-0.5 shrink-0">
                       {i + 1}
                     </span>
-                    <MathText text={hint[lang]} />
+                    <MathText text={hint[examDisplayLang]} />
                   </motion.div>
                 ))}
               </div>
@@ -767,7 +790,7 @@ export default function App() {
                 </div>
                 <div className="space-y-6 font-medium leading-relaxed text-[var(--text-main)]">
                   {question.solution ? (
-                    question.solution[lang].map((step, i) => (
+                    question.solution[examDisplayLang].map((step, i) => (
                       <div key={i} className="flex space-x-5">
                         <span className="text-blue-500 dark:text-blue-400 font-black text-xl shrink-0">{i + 1}.</span>
                         <div className="pt-0.5">
@@ -777,7 +800,7 @@ export default function App() {
                     ))
                   ) : question.explanation ? (
                     <div className="text-lg">
-                      <MathText text={question.explanation[lang]} />
+                      <MathText text={question.explanation[examDisplayLang]} />
                     </div>
                   ) : null}
                 </div>
@@ -1067,10 +1090,18 @@ export default function App() {
             <h3 className="text-xs font-black text-[var(--text-muted)] uppercase tracking-[0.2em] px-1">
               {topic.formula.title[lang]}
             </h3>
-            <div className="neon-gradient p-10 rounded-[2.5rem] shadow-2xl shadow-blue-500/20 text-center relative overflow-hidden">
+            <div className={cn(
+              "neon-gradient rounded-[2.5rem] shadow-2xl shadow-blue-500/20 relative overflow-hidden",
+              topic.subject === 'kyrgyz' ? "p-6" : "p-10 text-center"
+            )}>
               <div className="absolute inset-0 bg-white/10 backdrop-blur-sm" />
-              <div className="relative text-white text-3xl font-black">
-                <MathText text={topic.formula.math} />
+              <div className={cn(
+                "relative text-white font-black space-y-1.5",
+                topic.subject === 'kyrgyz' ? "text-base text-left" : "text-3xl"
+              )}>
+                {topic.formula.math.split('\n').map((line, i) => (
+                  <div key={i}><MathText text={line} /></div>
+                ))}
               </div>
             </div>
           </section>
@@ -1089,8 +1120,13 @@ export default function App() {
                     <div className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">
                       <MathText text={step.step} />
                     </div>
-                    <div className="text-2xl font-black text-[var(--text-main)]">
-                      <MathText text={step.math} />
+                    <div className={cn(
+                      "font-black text-[var(--text-main)]",
+                      topic.subject === 'kyrgyz' ? "text-lg" : "text-2xl"
+                    )}>
+                      {step.math.split('\n').map((line, j) => (
+                        <div key={j}><MathText text={line} /></div>
+                      ))}
                     </div>
                   </div>
                 ))}
