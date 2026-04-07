@@ -1,4 +1,4 @@
-export type Subject = 'algebra' | 'geometry' | 'russian' | 'history';
+export type Subject = 'algebra' | 'geometry' | 'russian' | 'history' | 'kyrgyz';
 
 export type Topic = string;
 

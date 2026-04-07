@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ALGEBRA_QUESTIONS, GEOMETRY_QUESTIONS, RUSSIAN_QUESTIONS } from './data/questions';
+import { KYRGYZ_QUESTIONS } from './data/kyrgyz_questions';
 import { TOPICS } from './data/topics';
 import { Question, Subject } from './types';
 import { useProgress } from './hooks/useProgress';
@@ -36,9 +37,10 @@ type AppState = 'landing' | 'exam' | 'results' | 'drill_selector' | 'mistake_rev
 type Language = 'ru' | 'ky';
 
 const SUBJECTS: { id: Subject; title: { ru: string; ky: string }; icon: any; color: string; gradient: string; emoji: string }[] = [
-  { id: 'algebra',  title: { ru: 'Алгебра',      ky: 'Алгебра'     }, icon: Layout,       color: 'bg-blue-600',   gradient: 'linear-gradient(135deg, #4361ee, #4cc9f0)', emoji: '📐' },
-  { id: 'geometry', title: { ru: 'Геометрия',    ky: 'Геометрия'   }, icon: BookOpen,     color: 'bg-violet-600', gradient: 'linear-gradient(135deg, #7209b7, #f72585)', emoji: '📏' },
-  { id: 'russian',  title: { ru: 'Русский язык', ky: 'Орус тили'   }, icon: GraduationCap,color: 'bg-teal-600',   gradient: 'linear-gradient(135deg, #06b6d4, #059669)', emoji: '📖' },
+  { id: 'algebra',  title: { ru: 'Алгебра',        ky: 'Алгебра'       }, icon: Layout,       color: 'bg-blue-600',   gradient: 'linear-gradient(135deg, #4361ee, #4cc9f0)', emoji: '📐' },
+  { id: 'geometry', title: { ru: 'Геометрия',      ky: 'Геометрия'     }, icon: BookOpen,     color: 'bg-violet-600', gradient: 'linear-gradient(135deg, #7209b7, #f72585)', emoji: '📏' },
+  { id: 'russian',  title: { ru: 'Русский язык',   ky: 'Орус тили'     }, icon: GraduationCap,color: 'bg-teal-600',   gradient: 'linear-gradient(135deg, #06b6d4, #059669)', emoji: '📖' },
+  { id: 'kyrgyz',   title: { ru: 'Кыргызский язык',ky: 'Кыргыз тили'  }, icon: Rocket,       color: 'bg-green-600',  gradient: 'linear-gradient(135deg, #16a34a, #86efac)', emoji: '🇰🇬' },
 ];
 
 interface SavedExamState {
@@ -199,6 +201,7 @@ export default function App() {
     if (subject === 'algebra')  return ALGEBRA_QUESTIONS;
     if (subject === 'geometry') return GEOMETRY_QUESTIONS;
     if (subject === 'russian')  return RUSSIAN_QUESTIONS;
+    if (subject === 'kyrgyz')   return KYRGYZ_QUESTIONS;
     return [];
   };
 
@@ -212,7 +215,7 @@ export default function App() {
     } else if (mode === 'mistake_review') {
       filtered = filtered.filter(q => progress.mistakes.includes(q.id));
     } else {
-      if (currentSubject === 'russian') {
+      if (currentSubject === 'russian' || currentSubject === 'kyrgyz') {
         filtered = allQuestions.filter(q => q.part === 1).sort(() => 0.5 - Math.random()).slice(0, 30);
       } else {
         const p1 = allQuestions.filter(q => q.part === 1).sort(() => 0.5 - Math.random()).slice(0, 20);
@@ -236,7 +239,7 @@ export default function App() {
     setSavedExamState(null);
 
     if (mode === 'exam') {
-      const time = currentSubject === 'russian' ? 3600 : 2400;
+      const time = (currentSubject === 'russian' || currentSubject === 'kyrgyz') ? 3600 : 2400;
       setTimeLeft(time);
       setIsTimerActive(true);
     } else {
@@ -496,7 +499,7 @@ export default function App() {
               <div className="text-left">
                 <div className="font-black text-lg leading-none">{lang === 'ru' ? 'Полный экзамен' : 'Толук сынак'}</div>
                 <div className="text-white/70 text-[11px] font-bold mt-1 uppercase tracking-wider">
-                  {currentSubject === 'russian'
+                  {(currentSubject === 'russian' || currentSubject === 'kyrgyz')
                     ? (lang === 'ru' ? '30 вопросов • 60 минут' : '30 суроо • 60 мүнөт')
                     : (lang === 'ru' ? '25 вопросов • 40 минут' : '25 суроо • 40 мүнөт')}
                 </div>
@@ -1233,9 +1236,10 @@ export default function App() {
     ];
 
     const subjectRows = [
-      { id: 'algebra',  label: lang === 'ru' ? 'Алгебра' : 'Алгебра',       color: 'bg-blue-500',   data: globalSubjects['algebra'] },
-      { id: 'geometry', label: lang === 'ru' ? 'Геометрия' : 'Геометрия',   color: 'bg-violet-500', data: globalSubjects['geometry'] },
-      { id: 'russian',  label: lang === 'ru' ? 'Русский язык' : 'Орус тили',color: 'bg-teal-500',   data: globalSubjects['russian'] },
+      { id: 'algebra',  label: lang === 'ru' ? 'Алгебра' : 'Алгебра',             color: 'bg-blue-500',   data: globalSubjects['algebra'] },
+      { id: 'geometry', label: lang === 'ru' ? 'Геометрия' : 'Геометрия',         color: 'bg-violet-500', data: globalSubjects['geometry'] },
+      { id: 'russian',  label: lang === 'ru' ? 'Русский язык' : 'Орус тили',      color: 'bg-teal-500',   data: globalSubjects['russian'] },
+      { id: 'kyrgyz',   label: lang === 'ru' ? 'Кыргызский язык' : 'Кыргыз тили', color: 'bg-green-500',  data: globalSubjects['kyrgyz'] },
     ];
     const totalAnswered = subjectRows.reduce((s, r) => s + (r.data?.total || 0), 0) || 1;
 
