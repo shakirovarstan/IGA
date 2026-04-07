@@ -445,7 +445,7 @@ export default function App() {
             <h2 className="text-[11px] font-black text-[var(--text-muted)] uppercase tracking-[0.18em]">
               {lang === 'ru' ? 'Предмет' : 'Предмет'}
             </h2>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               {SUBJECTS.map((s) => {
                 const sStudied = progress.studiedTopics.filter(id => TOPICS.find(t => t.id === id)?.subject === s.id).length;
                 const sTotal = TOPICS.filter(t => t.subject === s.id).length;
