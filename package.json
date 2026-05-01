@@ -2,8 +2,8 @@
   "name": "iga-imported",
   "private": true,
   "version": "0.0.0",
-  "packageManager": "pnpm@9.5.0"
   "type": "module",
+  "packageManager": "pnpm@9.5.0",
   "scripts": {
     "dev": "vite artifacts/iga-ready --config artifacts/iga-ready/vite.config.ts --port 3000 --host 0.0.0.0",
     "build": "vite build artifacts/iga-ready --config artifacts/iga-ready/vite.config.ts",
