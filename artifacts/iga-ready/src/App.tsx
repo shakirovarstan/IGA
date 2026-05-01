@@ -155,6 +155,15 @@ export default function App() {
   useEffect(() => {
     if (pageViewFired.current) return;
     pageViewFired.current = true;
+     
+    // Process deep links
+    const searchParams = new URLSearchParams(window.location.search);
+    const ref = searchParams.get('ref');
+    if (ref) {
+      localStorage.setItem('pending_friend_ref', ref);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
     const data = getAnalytics();
     data.sessionCount = (data.sessionCount || 0) + 1;
     const today = new Date().toISOString().slice(0, 10);
@@ -163,6 +172,29 @@ export default function App() {
     trackEvent('page_view');
   }, []);
 
+  
+  useEffect(() => {
+    if (profile) {
+      const pendingRef = localStorage.getItem('pending_friend_ref');
+      if (pendingRef) {
+        // Only run logic if different from current user
+        if (pendingRef !== profile.name) {
+          const isDuplicate = profile.friends?.some((f: any) => f.name === pendingRef);
+          if (!isDuplicate) {
+            const newFriend = {
+              name: pendingRef,
+              surname: '',
+              grade: lang === 'ru' ? 'По приглашению' : 'Чакыруу боюнча',
+              xp: Math.floor(Math.random() * 500) + 100, // starting XP for the friended user
+              isPending: false
+            };
+            saveProfile({ ...profile, friends: [...(profile.friends || []), newFriend] });
+          }
+        }
+        localStorage.removeItem('pending_friend_ref');
+      }
+    }
+  }, [profile, saveProfile, lang]);
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
   }, [darkMode]);

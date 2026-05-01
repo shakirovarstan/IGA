@@ -18,30 +18,7 @@ export function ProfileScreen({ profile, lang, progress, onLogout, setLang, onUp
   const [editName, setEditName] = useState(profile.name);
   const [editSurname, setEditSurname] = useState(profile.surname);
   const [editAvatar, setEditAvatar] = useState(profile.avatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${profile.name}`);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
-    return localStorage.getItem('iga_notifications') === 'true';
-  });
-
-  const toggleNotifications = () => {
-    if (!notificationsEnabled) {
-      if ('Notification' in window) {
-        Notification.requestPermission().then(permission => {
-          if (permission === 'granted') {
-            setNotificationsEnabled(true);
-            localStorage.setItem('iga_notifications', 'true');
-            alert(lang === 'ru' ? 'Уведомления включены!' : 'Билдирүүлөр күйгүзүлдү!');
-          } else {
-            alert(lang === 'ru' ? 'Вы запретили уведомления в браузере.' : 'Сиз браузерде билдирүүлөрдү чектедиңиз.');
-          }
-        });
-      } else {
-        alert(lang === 'ru' ? 'Ваш браузер не поддерживает уведомления.' : 'Браузериңиз билдирүүлөрдү колдобойт.');
-      }
-    } else {
-      setNotificationsEnabled(false);
-      localStorage.setItem('iga_notifications', 'false');
-    }
-  };
+  
   const totalCorrect = Object.values(progress.topicStats).reduce((acc, stat) => acc + stat.correct, 0);
   const totalAnswered = Object.values(progress.topicStats).reduce((acc, stat) => acc + stat.total, 0);
   const xp = totalCorrect * 15; // Increased XP per correct answer for better feeling
@@ -53,9 +30,7 @@ export function ProfileScreen({ profile, lang, progress, onLogout, setLang, onUp
   const fakeNames = ['Амина', 'Белек', 'Дастан', 'Amina', 'Felix', 'Амина С.', 'Нурик Ж.', 'Айбек М.', 'Жибек Т.', 'Улан', 'Ulan'];
   const filteredFriends = rawFriends.filter(f => !fakeNames.some(fake => f.name.includes(fake)));
 
-  const [showAddFriend, setShowAddFriend] = useState(false);
-  const [friendLinkInput, setFriendLinkInput] = useState('');
-
+ 
   const getRankData = (xpValue: number) => {
     if (xpValue >= 2000) return { title: lang === 'ru' ? 'Гуру' : 'Гуру', bg: 'bg-indigo-600', text: 'text-white', icon: '👑' };
     if (xpValue >= 1000) return { title: lang === 'ru' ? 'Мастер' : 'Мастер', bg: 'bg-[#84fb42]', text: 'text-[#2d7100]', icon: '🌟' };
@@ -77,7 +52,7 @@ export function ProfileScreen({ profile, lang, progress, onLogout, setLang, onUp
   const activeTitles = getTitles();
 
   const handleInvite = () => {
-    const link = "https://iga-prep.com/invite?ref=" + encodeURIComponent(profile.name);
+    const link = `${window.location.origin}/invite?ref=${encodeURIComponent(profile.name)}`;
     if (navigator.share) {
       navigator.share({ title: 'Присоединяйся к IGA Prep!', url: link }).catch(() => {
         navigator.clipboard.writeText(link);
@@ -92,29 +67,6 @@ export function ProfileScreen({ profile, lang, progress, onLogout, setLang, onUp
   const saveProfile = () => {
     onUpdateProfile({ ...profile, name: editName, surname: editSurname, avatar: editAvatar });
     setIsEditing(false);
-  };
-
-  const handleAddFriend = () => {
-    // Only allow adding if it's a valid link and it feels 'real'
-    if (friendLinkInput.includes('ref=')) {
-      const name = decodeURIComponent(friendLinkInput.split('ref=')[1].split('&')[0]);
-      // Instead of random XP, we start with 0 or a fixed value for invited friends until they 'accept'
-      const newFriend = { 
-        name, 
-        surname: '', 
-        grade: lang === 'ru' ? 'По приглашению' : 'Чакыруу боюнча', 
-        xp: 0,
-        isPending: true 
-      };
-      
-      const newFriends = [...(profile.friends || []), newFriend];
-      onUpdateProfile({ ...profile, friends: newFriends });
-      alert(lang === 'ru' ? 'Запрос отправлен!' : 'Сурам жөнөтүлдү!');
-      setShowAddFriend(false);
-      setFriendLinkInput('');
-    } else {
-      alert(lang === 'ru' ? 'Неверная ссылка!' : 'Туура эмес шилтеме!');
-    }
   };
 
   return (
@@ -208,9 +160,7 @@ export function ProfileScreen({ profile, lang, progress, onLogout, setLang, onUp
              <h2 className="text-[22px] font-serif font-bold text-[var(--text-main)]">
                {lang === 'ru' ? 'Друзья' : 'Достор'}
              </h2>
-             <button onClick={() => setShowAddFriend(true)} className="text-[#006590] text-[10px] font-black tracking-wider uppercase bg-blue-50 px-3 py-1 rounded-full">
-               {lang === 'ru' ? '+ ДОБАВИТЬ' : '+ КОШУУ'}
-             </button>
+             
            </div>
            
            <div className="bg-white rounded-[1.5rem] border border-[#e3e2e2] shadow-sm p-2 mb-4 overflow-hidden">
@@ -288,20 +238,7 @@ export function ProfileScreen({ profile, lang, progress, onLogout, setLang, onUp
           <h2 className="text-[22px] font-serif font-bold text-[var(--text-main)] mb-4">
             {lang === 'ru' ? 'Настройки' : 'Жөндөөлөр'}
           </h2>
-          <div className="bg-white rounded-[1.5rem] border border-[#e3e2e2] shadow-sm overflow-hidden">
-             <div className="flex items-center gap-4 p-5" onClick={toggleNotifications}>
-              <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-[#1cb0f6] shrink-0">
-                 <Bell className="w-5 h-5" />
-              </div>
-               <div className="flex-1">
-                 <div className="font-bold text-[15px]">{lang === 'ru' ? 'Уведомления' : 'Билдирүүлөр'}</div>
-                 <div className="text-[12px] text-[var(--text-muted)] font-medium">Напоминания о занятиях</div>
-               </div>
-               <div className={cn("w-12 h-6 rounded-full relative cursor-pointer transition-colors", notificationsEnabled ? "bg-[#84fb42]" : "bg-slate-300")}>
-                  <div className={cn("absolute top-1 w-4 h-4 bg-white rounded-full transition-all", notificationsEnabled ? "right-1" : "left-1")} />
-               </div>
-            </div>
-            <div className="w-full h-[1px] bg-slate-100 ml-16" />
+          <
             <div className="flex items-center gap-4 p-5">
               <div className="w-10 h-10 bg-orange-50 rounded-full flex items-center justify-center text-[#f18e00] shrink-0">
                  <Globe className="w-5 h-5" />
@@ -330,28 +267,7 @@ export function ProfileScreen({ profile, lang, progress, onLogout, setLang, onUp
 
       </div>
 
-      {showAddFriend && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[1.5rem] p-6 w-full max-w-sm flex flex-col gap-4 shadow-xl border border-[var(--card-border)]">
-            <h3 className="font-bold text-lg text-center">{lang === 'ru' ? 'Добавить друга' : 'Дос кошуу'}</h3>
-            <p className="text-sm text-center text-[var(--text-muted)] mb-2">
-              {lang === 'ru' ? 'Вставьте ссылку-приглашение от друга' : 'Досуңуздун чакыруу шилтемесин киргизиңиз'}
-            </p>
-            <div>
-              <input 
-                value={friendLinkInput} 
-                onChange={e => setFriendLinkInput(e.target.value)} 
-                placeholder="https://iga-prep.web.app/invite?ref=..."
-                className="w-full bg-slate-100 px-4 py-3 rounded-xl outline-none font-medium" 
-              />
-            </div>
-            <div className="flex gap-3 mt-2">
-              <button onClick={() => setShowAddFriend(false)} className="flex-1 py-3 text-slate-500 font-bold rounded-xl active:bg-slate-50">{lang === 'ru' ? 'Отмена' : 'Жокко чыгаруу'}</button>
-              <button onClick={handleAddFriend} className="flex-1 py-3 bg-[#1cb0f6] text-white font-bold rounded-xl shadow-sm active:scale-95 transition-transform">{lang === 'ru' ? 'Добавить' : 'Кошуу'}</button>
-            </div>
-          </div>
-        </div>
-      )}
+    
 
       {isEditing && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
