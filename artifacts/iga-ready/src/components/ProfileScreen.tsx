@@ -51,7 +51,7 @@ export function ProfileScreen({ profile, lang, progress, onLogout, setLang, onUp
   const activeTitles = getTitles();
 
   const handleInvite = () => {
-    const link = `${window.location.origin}/invite?ref=${encodeURIComponent(profile.name)}`;
+    const link = `${window.location.origin}/?ref=${encodeURIComponent(profile.name)}`;
     if (navigator.share) {
       navigator.share({ title: 'Присоединяйся к IGA Prep!', url: link }).catch(() => {
         navigator.clipboard.writeText(link);
