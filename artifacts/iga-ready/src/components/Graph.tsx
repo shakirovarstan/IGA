@@ -13,13 +13,15 @@ export const Graph: React.FC<GraphProps> = ({ type, data, lang }) => {
     return (
       <div className="w-full h-48 flex items-end justify-around bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-6 border border-slate-100 dark:border-slate-700">
         {data.map((val: number, i: number) => (
-          <div key={i} className="flex flex-col items-center space-y-2 flex-1">
+          <div key={i} className="flex flex-col items-center space-y-2 flex-1 h-full">
             <div className="text-[10px] font-black text-slate-400 dark:text-slate-500">{val}</div>
-            <motion.div 
-              initial={{ height: 0 }}
-              animate={{ height: `${(val / max) * 100}%` }}
-              className="w-8 bg-blue-500 rounded-t-lg shadow-lg shadow-blue-500/20"
-            />
+            <div className="flex-1 w-full flex items-end justify-center px-1">
+              <motion.div 
+                initial={{ height: 0 }}
+                animate={{ height: `${(val / max) * 100}%` }}
+                className="w-full max-w-[32px] bg-blue-500 rounded-t-lg shadow-lg shadow-blue-500/20"
+              />
+            </div>
             <div className="text-[10px] font-black text-slate-600 dark:text-slate-400">
               {lang === 'ru' ? `День ${i + 1}` : `${i + 1}-күн`}
             </div>

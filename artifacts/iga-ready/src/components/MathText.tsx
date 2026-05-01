@@ -1,29 +1,26 @@
+import React from 'react';
 import 'katex/dist/katex.min.css';
 import { InlineMath, BlockMath } from 'react-katex';
 
 interface MathTextProps {
   text: string;
-  block?: boolean;
-  className?: string;
 }
 
-export function MathText({ text, block = false, className }: MathTextProps) {
-  // Split text by $...$ to find math parts
-  const parts = text.split(/(\$.*?\$)/g);
+export const MathText: React.FC<MathTextProps> = ({ text }) => {
+  if (!text) return null;
+
+  // Split text by $ delimiters
+  const parts = text.split(/(\$[^$]+\$)/g);
 
   return (
-    <div className={className}>
-      {parts.map((part, i) => {
+    <span>
+      {parts.map((part, index) => {
         if (part.startsWith('$') && part.endsWith('$')) {
-          const math = part.slice(1, -1);
-          return block ? (
-            <BlockMath key={i} math={math} />
-          ) : (
-            <InlineMath key={i} math={math} />
-          );
+          const content = part.slice(1, -1);
+          return <InlineMath key={index}>{content}</InlineMath>;
         }
-        return <span key={i}>{part}</span>;
+        return <span key={index}>{part}</span>;
       })}
-    </div>
+    </span>
   );
-}
+};

@@ -1,4 +1,7 @@
-export type Subject = 'algebra' | 'geometry' | 'russian' | 'history' | 'kyrgyz';
+export type Subject = 'algebra' | 'geometry' | 'russian' | 'kyrgyz';
+
+export type AppState = 'registration' | 'landing' | 'exam' | 'results' | 'drill_selector' | 'mistake_review' | 'topic_list' | 'learn_topic' | 'admin' | 'practice' | 'profile' | 'formulas';
+export type Language = 'ru' | 'ky';
 
 export type Topic = string;
 
@@ -66,6 +69,7 @@ export interface UserProgress {
   lastActive: string | null;
   totalQuestions: number;
   topicStats: Record<string, TopicStats>;
+  subjectStats: Record<string, TopicStats>;
   mistakes: string[]; // Question IDs
   studiedTopics: string[]; // Topic IDs
 }
