@@ -4,7 +4,6 @@ export interface UserProfile {
   name: string;
   surname: string;
   grade: string;
-  phone: string;
   friends?: any[];
   avatar?: string;
 }
