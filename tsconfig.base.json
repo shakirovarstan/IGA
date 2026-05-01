@@ -20,6 +20,8 @@
     "skipLibCheck": true,
     "target": "es2022",
     "types": [],
-    "customConditions": ["workspace"]
+    "paths": {
+      "@/*": ["./artifacts/iga-ready/src/*"]
+    }
   }
 }
