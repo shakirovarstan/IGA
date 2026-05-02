@@ -1005,21 +1005,45 @@ export default function App() {
                     {lang === 'ru' ? 'Подсказка' : 'Кеңеш'}
                   </h3>
                 </div>
-                <div className="text-[var(--text-main)] font-medium leading-relaxed mb-6">
+                <div className="text-[var(--text-main)] font-medium leading-relaxed mb-6 space-y-4">
                   {question.hints && question.hints.length > 0 ? (
-                    <MathText text={question.hints[0][examDisplayLang]} />
+                  <div className="space-y-3">
+                      {question.hints.slice(0, hintIndex + 1).map((h, i) => (
+                        <div key={i} className="flex gap-3">
+                          <div className="w-5 h-5 rounded-full bg-yellow-100 flex items-center justify-center text-[10px] font-bold text-yellow-700 shrink-0 mt-0.5">
+                            {i + 1}
+                          </div>
+                          <MathText text={h[examDisplayLang]} />
+                        </div>
+                      ))}
+                    </div>
                   ) : question.explanation ? (
+                    <div className="bg-blue-50 p-4 rounded-xl text-blue-800 text-sm italic">
                     <MathText text={question.explanation[examDisplayLang]} />
+                    </div>
                   ) : (
-                    <p>{lang === 'ru' ? 'К сожалению, к этой задаче нет подсказки. Попробуйте найти ответ в учебнике!' : 'Кечиресиз, бул маселе боюнча кеңеш жок. Жообун окуу китебинен издеп көрүңүз!'}</p>
+                    <p className="text-slate-400 text-center py-4">
+                      {lang === 'ru' ? 'К сожалению, к этой задаче нет подсказки. Попробуйте найти ответ в учебнике!' : 'Кечиресиз, бул маселе боюнча кеңеш жок. Жообун окуу китебинен издеп көрүңүз!'}
+                    </p>
                   )}
                 </div>
+                      
+                <div className="flex flex-col gap-2">
+                  {question.hints && hintIndex < question.hints.length - 1 && (
+                    <button
+                      onClick={() => setHintIndex(prev => prev + 1)}
+                      className="w-full neon-gradient text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-transform"
+                    >
+                      {lang === 'ru' ? 'Следующая подсказка' : 'Кийинки кеңеш'}
+                    </button>
+                  )}
                 <button
                   onClick={() => setShowHintModal(false)}
                   className="w-full bg-slate-100 dark:bg-slate-700 text-[var(--text-main)] font-bold py-3 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
                 >
                   {lang === 'ru' ? 'Понятно' : 'Түшүнүктүү'}
                 </button>
+                </div>
               </motion.div>
             </motion.div>
           )}
