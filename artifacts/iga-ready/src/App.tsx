@@ -70,7 +70,6 @@ function saveAnalytics(data: any) {
 
 export default function App() {
   const { profile, saveProfile, clearProfile } = useProfile();
-  const [darkMode, setDarkMode]       = useState(false);
   const [state, setState]             = useState<AppState>(profile ? 'landing' : 'registration');
   const [lang, setLang]               = useState<Language>('ru');
   const [currentSubject, setCurrentSubject] = useState<Subject>('algebra');
@@ -195,10 +194,6 @@ export default function App() {
       }
     }
   }, [profile, saveProfile, lang]);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', darkMode);
-  }, [darkMode]);
 
   useEffect(() => {
     if (state === 'admin') fetchGlobalStats();
@@ -435,7 +430,7 @@ export default function App() {
     const progressPct = totalTopics > 0 ? Math.round((studiedCount / totalTopics) * 100) : 0;
 
     return (
-      <div className="min-h-screen bg-slate-100 dark:bg-slate-900 flex justify-center">
+      <div className="min-h-screen bg-slate-100 flex justify-center">
         <div className="w-full max-w-md bg-[var(--bg-app)] min-h-screen shadow-2xl relative flex flex-col overflow-hidden">
           {showAdminPrompt && (
             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-6" onClick={() => setShowAdminPrompt(false)}>
@@ -477,9 +472,6 @@ export default function App() {
                   <button onClick={() => setLang('ru')} className={cn("px-2.5 py-1 text-xs font-black rounded-lg transition-all", lang === 'ru' ? "bg-white text-blue-700 shadow-sm" : "text-white/80")}>RU</button>
                   <button onClick={() => setLang('ky')} className={cn("px-2.5 py-1 text-xs font-black rounded-lg transition-all", lang === 'ky' ? "bg-white text-blue-700 shadow-sm" : "text-white/80")}>KY</button>
                 </div>
-                <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-xl bg-white/15 text-white shadow-sm">
-                  {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                </button>
                 {adminUnlocked && (
                   <button onClick={() => setState('admin')} className="p-2 rounded-xl bg-white/15 text-white shadow-sm">
                     <ShieldCheck className="w-4 h-4" />
@@ -498,22 +490,22 @@ export default function App() {
             </div>
 
             <div className="flex gap-3 relative z-10">
-              <div className="flex-1 bg-white dark:bg-slate-800 rounded-[1.25rem] p-3.5 flex items-center gap-3 shadow-lg shadow-blue-900/20 dark:shadow-none">
-                <div className="bg-orange-100 dark:bg-orange-500/20 p-2.5 rounded-xl">
-                  <Flame className="w-5 h-5 text-orange-500 dark:text-orange-400 animate-pulse-soft" />
+              <div className="flex-1 bg-white rounded-[1.25rem] p-3.5 flex items-center gap-3 shadow-lg shadow-blue-900/20">
+                <div className="bg-orange-100 p-2.5 rounded-xl">
+                  <Flame className="w-5 h-5 text-orange-500 animate-pulse-soft" />
                 </div>
                 <div>
-                  <div className="text-slate-800 dark:text-white font-black text-xl leading-none">{progress.streak}</div>
-                  <div className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wide mt-1">{lang === 'ru' ? 'Дней подряд' : 'Күн катары'}</div>
+                  <div className="text-slate-800 font-black text-xl leading-none">{progress.streak}</div>
+                  <div className="text-slate-500 text-[10px] font-bold uppercase tracking-wide mt-1">{lang === 'ru' ? 'Дней подряд' : 'Күн катары'}</div>
                 </div>
               </div>
-              <div className="flex-1 bg-white dark:bg-slate-800 rounded-[1.25rem] p-3.5 flex items-center gap-3 shadow-lg shadow-blue-900/20 dark:shadow-none">
-                <div className="bg-yellow-100 dark:bg-yellow-500/20 p-2.5 rounded-xl">
-                  <Trophy className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+              <div className="flex-1 bg-white rounded-[1.25rem] p-3.5 flex items-center gap-3 shadow-lg shadow-blue-900/20">
+                <div className="bg-yellow-100 p-2.5 rounded-xl">
+                  <Trophy className="w-5 h-5 text-yellow-600" />
                 </div>
                 <div>
-                  <div className="text-slate-800 dark:text-white font-black text-xl leading-none">{progress.totalQuestions}</div>
-                  <div className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wide mt-1">{lang === 'ru' ? 'Решено' : 'Чечилди'}</div>
+                  <div className="text-slate-800 font-black text-xl leading-none">{progress.totalQuestions}</div>
+                  <div className="text-slate-500 text-[10px] font-bold uppercase tracking-wide mt-1">{lang === 'ru' ? 'Решено' : 'Чечилди'}</div>
                 </div>
               </div>
             </div>
@@ -583,22 +575,22 @@ export default function App() {
                 onClick={() => setState('drill_selector')}
                 className="glass-card card-shadow rounded-[1.25rem] p-4 flex items-center gap-4 active:scale-95 transition-all hover:-translate-y-0.5 group"
               >
-                <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                  <BarChart3 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+                  <BarChart3 className="w-6 h-6 text-blue-600" />
                 </div>
                 <div className="text-left flex-1">
                   <div className="font-bold text-[var(--text-main)] text-[15px] leading-tight mb-1">{lang === 'ru' ? 'Тренировка по темам' : 'Темалар боюнча машыгуу'}</div>
                   <div className="text-[12px] text-[var(--text-muted)] font-medium leading-none">{lang === 'ru' ? 'Отработай слабые места' : 'Алсыз жактарды бекемдө'}</div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-slate-300 dark:text-slate-600 group-hover:text-slate-400 transition-colors" />
+                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-slate-400 transition-colors" />
               </button>
 
               <button 
                 onClick={() => startExam('mistake_review')}
                 className="glass-card card-shadow rounded-[1.25rem] p-4 flex items-center gap-4 active:scale-95 transition-all hover:-translate-y-0.5 group"
               >
-                <div className="w-12 h-12 rounded-xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center flex-shrink-0">
-                  <RotateCcw className="w-6 h-6 text-red-600 dark:text-red-400" />
+                <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
+                  <RotateCcw className="w-6 h-6 text-red-600" />
                 </div>
                 <div className="text-left flex-1">
                   <div className="font-bold text-[var(--text-main)] text-[15px] leading-tight mb-1">{lang === 'ru' ? 'Работа над ошибками' : 'Каталар менен иштөө'}</div>
@@ -606,15 +598,15 @@ export default function App() {
                     {getMistakeQuestions().length} {lang === 'ru' ? 'вопросов требуют повтора' : 'суроо кайталоону керек'}
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-slate-300 dark:text-slate-600 group-hover:text-slate-400 transition-colors" />
+                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-slate-400 transition-colors" />
               </button>
 
               <button 
                 onClick={() => setState('topic_list')}
                 className="glass-card card-shadow rounded-[1.25rem] p-4 flex items-center gap-4 active:scale-95 transition-all hover:-translate-y-0.5 group"
               >
-                <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                  <BookOpen className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
+                  <BookOpen className="w-6 h-6 text-emerald-600" />
                 </div>
                 <div className="text-left flex-1">
                   <div className="font-bold text-[var(--text-main)] text-[15px] leading-tight mb-1">{lang === 'ru' ? 'Учебник по темам' : 'Окуу куралы'}</div>
@@ -622,7 +614,7 @@ export default function App() {
                     {studiedCount}/{totalTopics} {lang === 'ru' ? 'тем изучено' : 'тема изилденди'}
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-slate-300 dark:text-slate-600 group-hover:text-slate-400 transition-colors" />
+                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-slate-400 transition-colors" />
               </button>
             </div>
           </div>
@@ -650,7 +642,7 @@ export default function App() {
             <span className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">
               {currentIndex + 1} / {currentQuestions.length}
             </span>
-            <div className="w-36 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+            <div className="w-36 h-2 bg-slate-200 rounded-full overflow-hidden">
               <div 
                 className="h-full rounded-full transition-all duration-500 ease-out" 
                 style={{ width: `${((currentIndex + 1) / currentQuestions.length) * 100}%`, background: subj.gradient }}
@@ -676,8 +668,8 @@ export default function App() {
               <div className={cn(
                 "font-mono font-black px-3 py-1.5 rounded-xl text-sm border", 
                 timeLeft < 300 
-                  ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 animate-pulse" 
-                  : "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border-slate-300 dark:border-slate-700"
+                  ? "bg-red-100 text-red-600 border-red-200 animate-pulse" 
+                  : "bg-white text-slate-800 border-slate-300"
               )}>
                 {formatTime(timeLeft)}
               </div>
@@ -690,7 +682,7 @@ export default function App() {
           !isPaintActive && "overflow-y-auto p-6 space-y-8 pb-32"
         )}>
           <div className={cn(
-            isPaintActive ? "overflow-y-auto shrink-0 max-h-[25vh] p-6 space-y-8 pb-4 scrollbar-thin border-b border-slate-100 dark:border-slate-800" : ""
+            isPaintActive ? "overflow-y-auto shrink-0 max-h-[25vh] p-6 space-y-8 pb-4 scrollbar-thin border-b border-slate-100" : ""
           )}>
             <div className="text-xl font-bold text-[var(--text-main)] leading-relaxed">
               <MathText text={question.text[examDisplayLang]} />
@@ -799,9 +791,9 @@ export default function App() {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     key={i} 
-                    className="bg-blue-50 dark:bg-blue-900/20 p-5 rounded-[2rem] border border-blue-100 dark:border-blue-900/50 text-blue-900 dark:text-blue-300 text-sm font-medium flex items-start"
+                    className="bg-blue-50 p-5 rounded-[2rem] border border-blue-100 text-blue-900 text-sm font-medium flex items-start"
                   >
-                    <span className="bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black mr-4 mt-0.5 shrink-0">
+                    <span className="bg-blue-200 text-blue-800 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black mr-4 mt-0.5 shrink-0">
                       {i + 1}
                     </span>
                     <MathText text={hint[examDisplayLang]} />
@@ -814,7 +806,7 @@ export default function App() {
                   {hintIndex < (question.hints?.length || 0) && (
                     <button 
                       onClick={() => setHintIndex(prev => prev + 1)}
-                      className="w-full bg-[var(--card-bg)] border-2 border-blue-500 text-blue-600 dark:text-blue-400 py-5 rounded-[2rem] font-black"
+                      className="w-full bg-[var(--card-bg)] border-2 border-blue-500 text-blue-600 py-5 rounded-[2rem] font-black"
                     >
                       {lang === 'ru' ? 'Показать подсказку' : 'Кеңеш көрсөтүү'}
                     </button>
@@ -866,7 +858,7 @@ export default function App() {
                   {question.solution ? (
                     question.solution[examDisplayLang].map((step, i) => (
                       <div key={i} className="flex space-x-5">
-                        <span className="text-blue-500 dark:text-blue-400 font-black text-xl shrink-0">{i + 1}.</span>
+                        <span className="text-blue-500 font-black text-xl shrink-0">{i + 1}.</span>
                         <div className="pt-0.5">
                           <MathText text={step} />
                         </div>
@@ -882,7 +874,7 @@ export default function App() {
                 {TOPICS.find(t => t.id === question.topic) && (
                   <button 
                     onClick={() => goToLearnTopic(question.topic)}
-                    className="w-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 py-5 rounded-[2rem] font-black flex items-center justify-center border border-blue-100 dark:border-blue-900/50"
+                    className="w-full bg-blue-50 text-blue-600 py-5 rounded-[2rem] font-black flex items-center justify-center border border-blue-100"
                   >
                     <BookOpen className="w-5 h-5 mr-3" />
                     {lang === 'ru' 
@@ -895,7 +887,7 @@ export default function App() {
           </AnimatePresence>
           </div>
           {isPaintActive && (
-            <div className="flex-1 min-h-0 relative mt-2 mb-2 bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 rounded-[2rem] overflow-hidden shadow-sm">
+            <div className="flex-1 min-h-0 relative mt-2 mb-2 bg-white border-2 border-slate-200 rounded-[2rem] overflow-hidden shadow-sm">
               <DrawingCanvas />
             </div>
           )}
@@ -997,7 +989,7 @@ export default function App() {
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-white dark:bg-slate-800 rounded-[2rem] p-6 max-w-sm w-full shadow-2xl relative"
+                className="bg-white rounded-[2rem] p-6 max-w-sm w-full shadow-2xl relative"
                 onClick={e => e.stopPropagation()}
               >
                 <div className="flex items-center gap-3 mb-4 text-yellow-500">
@@ -1040,7 +1032,7 @@ export default function App() {
                   )}
                   <button
                     onClick={() => setShowHintModal(false)}
-                    className="w-full bg-slate-100 dark:bg-slate-700 text-[var(--text-main)] font-bold py-3 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                    className="w-full bg-slate-100 text-[var(--text-main)] font-bold py-3 rounded-xl hover:bg-slate-200 transition-colors"
                   >
                     {lang === 'ru' ? 'Понятно' : 'Түшүнүктүү'}
                   </button>
@@ -1078,7 +1070,7 @@ export default function App() {
           <h2 className="text-3xl font-black text-[var(--text-main)]">{lang === 'ru' ? 'Ваш результат' : 'Сиздин жыйынтыгыңыз'}</h2>
           
           <div className="relative inline-flex items-center justify-center">
-            <div className="w-52 h-52 rounded-full border-8 border-slate-100 dark:border-slate-800 flex items-center justify-center relative z-10">
+            <div className="w-52 h-52 rounded-full border-8 border-slate-100 flex items-center justify-center relative z-10">
               <div className="flex flex-col items-center justify-center">
                 <div className={cn("text-8xl font-black leading-[1]", grade.c)}>{grade.l}</div>
                 <div className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-[0.3em] mt-2">
@@ -1104,7 +1096,7 @@ export default function App() {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="glass-card p-5 rounded-[2rem] text-center space-y-1">
-            <div className="text-2xl font-black text-blue-600 dark:text-blue-400">{percentage}%</div>
+            <div className="text-2xl font-black text-blue-600">{percentage}%</div>
             <div className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">
               {lang === 'ru' ? 'Процент' : 'Пайыз'}
             </div>
@@ -1132,11 +1124,11 @@ export default function App() {
                     <span className="text-[var(--text-muted)] truncate max-w-[160px]">
                       {topicData?.title[lang] || topic}
                     </span>
-                    <span className={cn(topicPercent >= 70 ? "text-green-600 dark:text-green-400" : topicPercent >= 40 ? "text-yellow-600 dark:text-yellow-400" : "text-red-600 dark:text-red-400")}>
+                    <span className={cn(topicPercent >= 70 ? "text-green-600" : topicPercent >= 40 ? "text-yellow-600" : "text-red-600")}>
                       {topicCorrect}/{topicQuestions.length}
                     </span>
                   </div>
-                  <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                     <div 
                       className={cn("h-full transition-all duration-1000 ease-out", topicPercent >= 70 ? "bg-green-500" : topicPercent >= 40 ? "bg-yellow-500" : "bg-red-500")}
                       style={{ width: `${topicPercent}%` }}
@@ -1227,9 +1219,9 @@ export default function App() {
                   <div className="flex items-center space-x-5">
                     <div className={cn(
                       "w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110",
-                      isMastered ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400" :
-                      isStudied ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400" : 
-                      "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+                      isMastered ? "bg-yellow-100 text-yellow-600" :
+                      isStudied ? "bg-green-100 text-green-600" : 
+                      "bg-slate-100 text-slate-500"
                     )}>
                       {isMastered ? <Trophy className="w-6 h-6" /> : <BookOpen className="w-6 h-6" />}
                     </div>
@@ -1318,7 +1310,7 @@ export default function App() {
                   </div>
                   {topic.example.steps.map((step, i) => (
                     <div key={i} className="space-y-2">
-                      <div className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">
+                      <div className="text-[10px] font-black text-blue-600 uppercase tracking-widest">
                         <MathText text={step.step} />
                       </div>
                       <div className={cn(
@@ -1351,9 +1343,9 @@ export default function App() {
               </h3>
               <div className="space-y-3">
                 {topic.commonMistakes[lang].map((mistake, i) => (
-                  <div key={i} className="flex items-start space-x-4 p-5 rounded-[2rem]" style={{ background: darkMode ? 'rgba(153,27,27,0.15)' : '#ffffff', borderLeft: '4px solid #ef4444', border: darkMode ? '1px solid rgba(153,27,27,0.4)' : '1px solid #fecaca', borderLeftWidth: '4px', borderLeftColor: '#ef4444' }}>
+                  <div key={i} className="flex items-start space-x-4 p-5 rounded-[2rem]" style={{ background: '#ffffff', borderLeft: '4px solid #ef4444', border: '1px solid #fecaca', borderLeftWidth: '4px', borderLeftColor: '#ef4444' }}>
                     <XCircle className="w-6 h-6 text-red-500 mt-0.5 shrink-0" />
-                    <p className="text-sm font-semibold leading-relaxed" style={{ color: darkMode ? '#fca5a5' : '#111827' }}>
+                    <p className="text-sm font-semibold leading-relaxed" style={{ color: '#111827' }}>
                       <MathText text={mistake} />
                     </p>
                   </div>
@@ -1420,9 +1412,9 @@ export default function App() {
                   <div className="flex items-center space-x-5">
                     <div className={cn(
                       "w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 shrink-0",
-                      isMastered ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400" :
-                      isStudied ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400" : 
-                      "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                      isMastered ? "bg-yellow-100 text-yellow-600" :
+                      isStudied ? "bg-green-100 text-green-600" : 
+                      "bg-blue-100 text-blue-600"
                     )}>
                       {isMastered ? <BookOpen className="w-5 h-5" /> : <Layout className="w-5 h-5" />}
                     </div>
@@ -1549,7 +1541,7 @@ export default function App() {
                     <span className="text-sm font-bold text-[var(--text-main)]">{s.label}</span>
                     <span className="text-sm font-black text-[var(--text-muted)]">{total} {lang === 'ru' ? 'отв.' : 'жооп'} · {pct}% ✓</span>
                   </div>
-                  <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                     <div className={cn("h-full rounded-full", s.color)} style={{ width: `${(total / totalAnswered) * 100}%` }} />
                   </div>
                 </div>
@@ -1582,7 +1574,7 @@ export default function App() {
   };
 
   return (
-    <div className={cn("min-h-screen transition-colors duration-300 selection:bg-blue-100 dark:selection:bg-blue-900/30", darkMode ? "dark bg-slate-900" : "bg-[var(--bg-app)]")}>
+    <div className="min-h-screen transition-colors duration-300 selection:bg-blue-100 bg-[var(--bg-app)]">
       <div className="max-w-2xl mx-auto min-h-screen flex flex-col relative">
         <AnimatePresence mode="wait">
           <motion.div

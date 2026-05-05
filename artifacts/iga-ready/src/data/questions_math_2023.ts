@@ -1096,7 +1096,7 @@ export const YEARLY_EXAMS: YearlyExam[] = [
   },
   {
     year: 2024,
-    subject: "Математика (Часть 2 и 3)",
+    subject: "Математика (2 и 3 Часть)",
     subjectKey: "math",
     questions: [
       {

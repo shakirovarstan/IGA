@@ -18,7 +18,7 @@ export function BottomNav({ state, setState, lang }: BottomNavProps) {
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-100 dark:border-slate-800 flex items-center justify-around px-2 py-4 pb-8 z-50">
+    <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-md border-t border-slate-100 flex items-center justify-around px-2 py-4 pb-8 z-50">
       {navItems.map((item) => {
         const isActive = state === item.id || (item.id === 'practice' && (state === 'drill_selector' || state === 'topic_list')) || (item.id === 'exam_bank' && (state === 'exam_bank' || state === 'yearly_exams'));
         const Icon = item.icon;
@@ -33,7 +33,7 @@ export function BottomNav({ state, setState, lang }: BottomNavProps) {
           >
             <div className={cn(
               "p-2 rounded-2xl transition-all duration-300",
-              isActive ? "bg-blue-50 dark:bg-blue-500/10" : "bg-transparent"
+              isActive ? "bg-blue-50" : "bg-transparent"
             )}>
               <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
             </div>
