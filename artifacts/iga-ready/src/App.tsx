@@ -15,6 +15,7 @@ import { PracticeScreen } from './components/PracticeScreen';
 import { MistakesScreen } from './components/MistakesScreen';
 import { FormulasScreen } from './components/FormulasScreen';
 import { ProfileScreen } from './components/ProfileScreen';
+import { ExamBankScreen } from './components/ExamBankScreen';
 import { BottomNav } from './components/BottomNav';
 import { generateAIQuestion } from './services/gemini';
 import { cn } from './lib/utils';
@@ -155,7 +156,7 @@ export default function App() {
   useEffect(() => {
     if (pageViewFired.current) return;
     pageViewFired.current = true;
-     
+    
     // Process deep links
     const searchParams = new URLSearchParams(window.location.search);
     const ref = searchParams.get('ref');
@@ -172,7 +173,6 @@ export default function App() {
     trackEvent('page_view');
   }, []);
 
-  
   useEffect(() => {
     if (profile) {
       const pendingRef = localStorage.getItem('pending_friend_ref');
@@ -195,6 +195,7 @@ export default function App() {
       }
     }
   }, [profile, saveProfile, lang]);
+
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
   }, [darkMode]);
@@ -1007,7 +1008,7 @@ export default function App() {
                 </div>
                 <div className="text-[var(--text-main)] font-medium leading-relaxed mb-6 space-y-4">
                   {question.hints && question.hints.length > 0 ? (
-                  <div className="space-y-3">
+                    <div className="space-y-3">
                       {question.hints.slice(0, hintIndex + 1).map((h, i) => (
                         <div key={i} className="flex gap-3">
                           <div className="w-5 h-5 rounded-full bg-yellow-100 flex items-center justify-center text-[10px] font-bold text-yellow-700 shrink-0 mt-0.5">
@@ -1019,7 +1020,7 @@ export default function App() {
                     </div>
                   ) : question.explanation ? (
                     <div className="bg-blue-50 p-4 rounded-xl text-blue-800 text-sm italic">
-                    <MathText text={question.explanation[examDisplayLang]} />
+                      <MathText text={question.explanation[examDisplayLang]} />
                     </div>
                   ) : (
                     <p className="text-slate-400 text-center py-4">
@@ -1027,7 +1028,7 @@ export default function App() {
                     </p>
                   )}
                 </div>
-                      
+                
                 <div className="flex flex-col gap-2">
                   {question.hints && hintIndex < question.hints.length - 1 && (
                     <button
@@ -1037,12 +1038,12 @@ export default function App() {
                       {lang === 'ru' ? 'Следующая подсказка' : 'Кийинки кеңеш'}
                     </button>
                   )}
-                <button
-                  onClick={() => setShowHintModal(false)}
-                  className="w-full bg-slate-100 dark:bg-slate-700 text-[var(--text-main)] font-bold py-3 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                >
-                  {lang === 'ru' ? 'Понятно' : 'Түшүнүктүү'}
-                </button>
+                  <button
+                    onClick={() => setShowHintModal(false)}
+                    className="w-full bg-slate-100 dark:bg-slate-700 text-[var(--text-main)] font-bold py-3 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                  >
+                    {lang === 'ru' ? 'Понятно' : 'Түшүнүктүү'}
+                  </button>
                 </div>
               </motion.div>
             </motion.div>
@@ -1611,6 +1612,16 @@ export default function App() {
             {state === 'topic_list'     && renderTopicList()}
             {state === 'learn_topic'    && renderTopicExplanation()}
             {state === 'formulas'       && <FormulasScreen currentSubject={currentSubject} lang={lang} onNavigate={setState} />}
+            {state === 'exam_bank'      && (
+              <ExamBankScreen 
+                lang={lang} 
+                onComplete={(xp) => {
+                  if (profile) {
+                    saveProfile({ ...profile, xp: profile.xp + xp });
+                  }
+                }} 
+              />
+            )}
             {state === 'admin'          && renderAdminPanel()}
           </motion.div>
         </AnimatePresence>
