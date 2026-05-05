@@ -101,7 +101,7 @@ export function MistakesScreen({ mistakes, lang, onStartReview, onNavigate }: Mi
                       <strong className="text-red-700 block mb-1">
                          {lang === 'ru' ? 'Правильный ответ:' : 'Туура жооп:'}
                       </strong>
-                        <div className="text-red-900 font-bold mb-3">
+                      <div className="text-red-900 font-bold mb-3">
                         {q.options ? (
                           <MathText text={(() => {
                             const opt = q.options.find(o => o.id === q.correctAnswer);
@@ -111,20 +111,20 @@ export function MistakesScreen({ mistakes, lang, onStartReview, onNavigate }: Mi
                         ) : q.correctAnswer}
                       </div>
                       
-                          {(q.solution || q.explanation) && (
+                      {(q.solution || q.explanation) && (
                          <div className="mt-3 bg-white/50 p-3 rounded-lg border border-red-50/50">
                            <div className="font-bold text-red-600 mb-2 text-xs uppercase tracking-wider">
                              {lang === 'ru' ? 'Разбор задания:' : 'Тапшырманы талдоо:'}
                            </div>
                            {q.solution ? (
                              <div className="text-red-800 text-xs space-y-2">
-                             {q.solution[lang].map((step, i) => (
-                               <div key={i} className="flex gap-2">
-                                 <span className="font-bold shrink-0">{i + 1}.</span>
-                                 <MathText text={step} />
-                               </div>
-                             ))}
-                                        </div>
+                                 {q.solution[lang].map((step, i) => (
+                                   <div key={i} className="flex gap-2">
+                                     <span className="font-bold shrink-0">{i + 1}.</span>
+                                     <MathText text={step} />
+                                   </div>
+                                 ))}
+                             </div>
                            ) : q.explanation ? (
                              <div className="text-red-800 text-[13px] leading-relaxed">
                                <MathText text={q.explanation[lang]} />

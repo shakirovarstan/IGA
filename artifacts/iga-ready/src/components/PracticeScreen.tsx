@@ -55,7 +55,6 @@ export function PracticeScreen({ lang, onSelectSubject, onNavigate, progress, mi
           </div>
           <div className="text-[10px] font-black uppercase tracking-widest text-slate-300 mt-1.5 flex justify-between">
             <span>{lang === 'ru' ? 'Подготовка' : 'Даярдык'}</span>
-            <span>{progress.subjectStats?.[subj.id]?.total || 0} вопр.</span>
           </div>
         </div>
       </button>
