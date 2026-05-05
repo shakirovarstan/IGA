@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { UserProfile } from '../hooks/useProfile';
 import { Language, UserProgress } from '../types';
-import { Bell, Globe, LogOut, ChevronRight, Flame, Trophy } from 'lucide-react';
+import { Bell, Globe, LogOut, ChevronRight, Flame, Trophy, MessageCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface ProfileScreenProps {
@@ -260,6 +260,30 @@ export function ProfileScreen({ profile, lang, progress, onLogout, setLang, onUp
                <div className="font-medium text-[15px] text-[#ba1a1a] ml-14">{lang === 'ru' ? 'Выйти из аккаунта' : 'Аккаунттан чыгуу'}</div>
                <LogOut className="w-5 h-5 text-[#ba1a1a]" />
             </button>
+          </div>
+        </div>
+
+        <div className="mt-8 mb-4">
+          <div className="bg-[#25D366] rounded-[1.5rem] p-6 text-white shadow-lg relative overflow-hidden group">
+             <div className="relative z-10">
+               <h3 className="font-bold text-lg mb-1">{lang === 'ru' ? 'Написать в WhatsApp' : 'WhatsApp аркылуу жазуу'}</h3>
+               <p className="text-green-50 text-xs mb-4 opacity-90 font-medium">
+                 {lang === 'ru' ? 'Есть вопросы или предложения? Мы всегда на связи!' : 'Суроолоруңуз же сунуштарыңыз барбы? Биз дайыма байланыштабыз!'}
+               </p>
+               
+               <div className="flex flex-col gap-3">
+                 <a 
+                   href="https://wa.me/996555611884" 
+                   target="_blank"
+                   rel="noreferrer"
+                   className="inline-flex items-center justify-center gap-3 bg-white text-[#25D366] px-5 py-4 rounded-xl font-bold text-sm active:scale-95 transition-transform shadow-md w-full animate-in fade-in zoom-in-95 duration-200"
+                 >
+                   <MessageCircle className="w-5 h-5" />
+                   +996 555 611 884
+                 </a>
+               </div>
+             </div>
+             <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
           </div>
         </div>
 
